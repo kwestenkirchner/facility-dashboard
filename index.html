@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facility Inspection Dashboard — St. Francis de Sales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:     #1a3a5c;
+  --red:      #b91c1c;
+  --red-bg:   #fee2e2;
+  --green:    #15803d;
+  --green-bg: #dcfce7;
+  --amber:    #b45309;
+  --amber-bg: #fef3c7;
+  --gray:     #6b7280;
+  --gray-bg:  #f3f4f6;
+  --border:   #e5e7eb;
+  --white:    #ffffff;
+  --text:     #111827;
+  --shadow:   0 1px 4px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.04);
+}
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:#f0f4f8;color:var(--text);min-height:100vh;font-size:14px; }
+
+/* HEADER */
+header { background:var(--navy);color:white;position:sticky;top:0;z-index:200;
+         box-shadow:0 2px 12px rgba(0,0,0,0.25); }
+.hbar  { background:var(--red);height:5px; }
+.hinner { display:flex;align-items:center;justify-content:space-between;
+          padding:12px 24px;flex-wrap:wrap;gap:8px; }
+.htitle h1 { font-size:1.05rem;font-weight:700; }
+.htitle p  { font-size:0.72rem;opacity:0.6;margin-top:2px; }
+.hright { display:flex;align-items:center;gap:12px; }
+.live-pill { display:flex;align-items:center;gap:6px;
+             background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+             border-radius:20px;padding:4px 10px;font-size:0.7rem;font-weight:600; }
+.live-dot { width:7px;height:7px;border-radius:50%;background:#4ade80;
+            animation:blink 1.8s ease-in-out infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.clock { font-size:0.8rem;font-variant-numeric:tabular-nums;opacity:0.8; }
+.rbtn { background:var(--red);border:none;color:white;padding:6px 14px;
+        border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;
+        transition:background 0.15s; }
+.rbtn:hover{background:#991b1b;} .rbtn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* BANNER */
+#banner { background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;
+          padding:16px 20px;margin-bottom:20px;display:none; }
+#banner h3 { color:#92400e;font-size:0.9rem;margin-bottom:6px; }
+#banner p  { color:#78350f;font-size:0.82rem;line-height:1.7; }
+#banner code { background:#fde68a;padding:1px 5px;border-radius:3px;font-size:0.8rem; }
+
+main { max-width:1300px;margin:0 auto;padding:20px 20px 48px; }
+
+/* STATS */
+.stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+         gap:12px;margin-bottom:20px; }
+.stat { background:var(--white);border-radius:10px;padding:16px;
+        box-shadow:var(--shadow);border-top:3px solid var(--border); }
+.stat.sn{border-top-color:var(--navy);}
+.stat.sg{border-top-color:var(--green);}
+.stat.sr{border-top-color:var(--red);}
+.stat.sa{border-top-color:var(--amber);}
+.slabel { font-size:0.67rem;font-weight:700;text-transform:uppercase;
+          letter-spacing:0.08em;color:var(--gray); }
+.sval   { font-size:2rem;font-weight:800;margin:6px 0 2px;
+          font-variant-numeric:tabular-nums;color:var(--navy); }
+.stat.sg .sval{color:var(--green);}
+.stat.sr .sval{color:var(--red);}
+.stat.sa .sval{color:var(--amber);}
+.ssub { font-size:0.7rem;color:var(--gray); }
+
+/* SECTION TITLE */
+.stitle { font-size:0.75rem;font-weight:700;text-transform:uppercase;
+          letter-spacing:0.09em;color:var(--navy);margin-bottom:10px;
+          display:flex;align-items:center;gap:7px; }
+.stitle::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* LOCATION GRID */
+.loc-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+            gap:10px;margin-bottom:20px; }
+.lcard { background:var(--white);border-radius:9px;padding:13px 14px;
+         box-shadow:var(--shadow);border-left:4px solid var(--border);
+         transition:transform 0.15s; }
+.lcard:hover{transform:translateY(-1px);}
+.lcard.lg{border-left-color:#22c55e;background:#f0fdf4;}
+.lcard.lr{border-left-color:var(--red);background:#fff5f5;}
+.lcard.ll{border-left-color:#d1d5db;}
+.lname { font-size:0.82rem;font-weight:700;color:var(--navy);margin-bottom:5px; }
+.lbadge { display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;
+           font-weight:600;padding:2px 7px;border-radius:20px;margin-bottom:5px; }
+.bgg{background:var(--green-bg);color:var(--green);}
+.bgr{background:var(--red-bg);color:var(--red);}
+.bgx{background:var(--gray-bg);color:var(--gray);}
+.lmeta { font-size:0.7rem;color:var(--gray);line-height:1.65; }
+.lmeta span{display:block;}
+
+/* TWO COL */
+.two { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px; }
+@media(max-width:820px){.two{grid-template-columns:1fr;}}
+
+/* CARD */
+.card { background:var(--white);border-radius:10px;padding:18px;
+        box-shadow:var(--shadow);margin-bottom:16px; }
+.ctitle { font-size:0.75rem;font-weight:700;text-transform:uppercase;
+          letter-spacing:0.07em;color:var(--navy);margin-bottom:14px;
+          padding-bottom:10px;border-bottom:1px solid var(--border); }
+.chart-wrap{height:220px;position:relative;}
+.chart-wrap.short{height:175px;}
+
+/* ISSUE LIST */
+.ilist{list-style:none;}
+.iitem{display:flex;align-items:flex-start;gap:10px;
+       padding:9px 0;border-bottom:1px solid var(--border);}
+.iitem:last-child{border-bottom:none;}
+.idot{width:8px;height:8px;border-radius:50%;background:var(--red);
+      flex-shrink:0;margin-top:4px;}
+.iloc{font-size:0.8rem;font-weight:700;color:var(--navy);}
+.itype{font-size:0.74rem;color:var(--gray);margin-top:1px;}
+.imeta{font-size:0.69rem;color:var(--gray);margin-top:2px;}
+.itime{margin-left:auto;font-size:0.7rem;color:var(--gray);
+       white-space:nowrap;flex-shrink:0;padding-left:8px;}
+.none{text-align:center;padding:24px;color:var(--green);font-weight:600;font-size:0.85rem;}
+
+/* INSPECTOR GRID */
+.ing{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.icard{background:var(--gray-bg);border-radius:8px;padding:10px 12px;}
+.iname{font-size:0.78rem;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.inum{font-size:1.3rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
+.isub{font-size:0.68rem;color:var(--gray);margin-top:1px;}
+.ibar-w{background:var(--border);border-radius:4px;height:4px;margin-top:7px;}
+.ibar{height:4px;border-radius:4px;transition:width 0.5s;}
+
+/* TABLE */
+.tbl-w{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+th{background:var(--navy);color:white;padding:8px 12px;text-align:left;
+   font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
+th:first-child{border-radius:6px 0 0 0;}th:last-child{border-radius:0 6px 0 0;}
+td{padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}tr:hover td{background:#f9fafb;}
+.badge{display:inline-flex;align-items:center;gap:4px;
+       padding:2px 7px;border-radius:20px;font-size:0.68rem;font-weight:700;}
+.bg-green{background:var(--green-bg);color:var(--green);}
+.bg-red{background:var(--red-bg);color:var(--red);}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.filters select{border:1px solid var(--border);border-radius:6px;padding:5px 9px;
+                font-size:0.75rem;background:white;color:var(--text);outline:none;}
+.filters select:focus{border-color:var(--navy);}
+
+/* LOADING */
+.loading{text-align:center;padding:36px;color:var(--gray);font-size:0.85rem;}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--border);
+      border-top-color:var(--navy);border-radius:50%;
+      animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.foot{text-align:center;font-size:0.7rem;color:var(--gray);padding:10px 0 4px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar"></div>
+  <div class="hinner">
+    <div class="htitle">
+      <h1>🏫 St. Francis de Sales — Facility Inspection Dashboard</h1>
+      <p>Restroom &amp; Locker Room Monitoring · Authorized Personnel Only</p>
+    </div>
+    <div class="hright">
+      <div class="live-pill"><span class="live-dot"></span>LIVE</div>
+      <span class="clock" id="clock">--:-- --</span>
+      <button class="rbtn" id="rbtn" onclick="fetchData()">↻ Refresh</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="banner">
+    <h3>⚙️ One Step Needed to Go Live</h3>
+    <p>Open this file in a text editor and replace <code>YOUR_APPS_SCRIPT_URL_HERE</code>
+    near the top of the &lt;script&gt; section with your deployed Apps Script Web App URL.
+    See the setup guide for exact step-by-step instructions.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat sn"><div class="slabel">Checks Today</div>
+      <div class="sval" id="s1">—</div><div class="ssub">all locations</div></div>
+    <div class="stat sg"><div class="slabel">All Clear</div>
+      <div class="sval" id="s2">—</div><div class="ssub">no issues found</div></div>
+    <div class="stat sr"><div class="slabel">Issues Reported</div>
+      <div class="sval" id="s3">—</div><div class="ssub">today</div></div>
+    <div class="stat sa"><div class="slabel">Open Issues</div>
+      <div class="sval" id="s4">—</div><div class="ssub">last 48 hours</div></div>
+    <div class="stat sn"><div class="slabel">Locations Covered</div>
+      <div class="sval" id="s5">—</div><div class="ssub">checked today</div></div>
+    <div class="stat sn"><div class="slabel">This Week</div>
+      <div class="sval" id="s6">—</div><div class="ssub">total inspections</div></div>
+  </div>
+
+  <div class="stitle">📍 Location Status — Today</div>
+  <div class="loc-grid" id="loc-grid">
+    <div class="loading"><span class="spin"></span>Loading locations…</div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <div class="ctitle">🚨 Open / Unresolved Issues (last 48 h)</div>
+      <ul class="ilist" id="open-issues">
+        <div class="loading"><span class="spin"></span>Loading…</div>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ctitle">👤 Inspector Activity — Today</div>
+      <div class="ing" id="insp-grid">
+        <div class="loading"><span class="spin"></span>Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <div class="ctitle">⏰ Inspections by Hour of Day</div>
+      <div class="chart-wrap"><canvas id="ch-hour"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">📍 Issues by Location (All Time)</div>
+      <div class="chart-wrap"><canvas id="ch-loc"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">📅 Daily Volume — Last 14 Days</div>
+    <div class="chart-wrap short"><canvas id="ch-week"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">📋 Recent Inspection Log</div>
+    <div class="filters">
+      <select id="fl" onchange="renderTable()"><option value="">All Locations</option></select>
+      <select id="fs" onchange="renderTable()">
+        <option value="">All Statuses</option>
+        <option value="clear">All Clear Only</option>
+        <option value="issue">Issues Only</option>
+      </select>
+      <select id="fw" onchange="renderTable()"><option value="">All Inspectors</option></select>
+    </div>
+    <div class="tbl-w">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Time</th><th>Location</th>
+          <th>Inspector</th><th>Issues</th><th>Status</th><th>Photos</th>
+        </tr></thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="loading"><span class="spin"></span>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot" id="foot"></div>
+</main>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  THE ONLY LINE YOU NEED TO CHANGE TO GO LIVE:
+//  Replace the placeholder below with your Apps Script Web App URL.
+//  You get this URL in the Apps Script editor under
+//  Deploy > Manage deployments.  It looks like:
+//  https://script.google.com/macros/s/AKfy.../exec
+// ══════════════════════════════════════════════════════════════
+const ENDPOINT = "YOUR_APPS_SCRIPT_URL_HERE";
+
+const REFRESH_MS = 120000; // auto-refresh every 2 minutes
+
+const LOCATIONS = [
+  "3rd Floor / 200 Level Restroom","2nd Floor / 100 Level Restroom",
+  "Cafeteria Men's Restroom","Cafeteria Women's Restroom",
+  "West Lobby Men's Restroom","West Lobby Women's Restroom",
+  "Auxiliary Locker Room 1","Auxiliary Locker Room 2",
+  "7th/8th Grade Locker Room","Swim Locker Room",
+];
+const INSPECTORS = [
+  "Ken Westenkirchner","Matt Prater","Corey Driver",
+  "Murell Gregory","Khyle Weirich","Paris Martin","Michael Hagmeyer"
+];
+
+let DATA=null, chH, chL, chW;
+
+// Clock
+setInterval(()=>{
+  document.getElementById("clock").textContent=
+    new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit"});
+},1000);
+
+// ── FETCH ────────────────────────────────────────────────────
+async function fetchData(){
+  const btn=document.getElementById("rbtn");
+  btn.disabled=true; btn.textContent="↻ Loading…";
+  if(ENDPOINT==="YOUR_APPS_SCRIPT_URL_HERE"){
+    document.getElementById("banner").style.display="block";
+    loadDemo(); btn.disabled=false; btn.textContent="↻ Refresh"; return;
+  }
+  try{
+    const res=await fetch(ENDPOINT);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    DATA=await res.json();
+    if(DATA.error) throw new Error(DATA.error);
+    renderAll();
+    document.getElementById("foot").textContent=
+      "Live data · Last refreshed: "+
+      new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:"2-digit"});
+  }catch(err){
+    console.error(err); loadDemo();
+    document.getElementById("foot").textContent=
+      "⚠️ Could not reach endpoint — showing demo data. ("+err.message+")";
+  }
+  btn.disabled=false; btn.textContent="↻ Refresh";
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────
+function renderAll(){
+  $("s1",DATA.todayCount);  $("s2",DATA.todayClear);
+  $("s3",DATA.todayIssues); $("s4",DATA.openIssueCount);
+  $("s5",DATA.locationsCovered+"/10"); $("s6",DATA.weekCount);
+  renderLocGrid(); renderOpenIssues(); renderInspectors();
+  renderCharts(); populateFilters(); renderTable();
+}
+
+function renderLocGrid(){
+  document.getElementById("loc-grid").innerHTML=LOCATIONS.map(loc=>{
+    const last=DATA.locationStatus[loc];
+    let cls,badge;
+    if(!last){cls="ll";badge=`<span class="lbadge bgx">⬜ Not Checked</span>`;}
+    else if(last.hasIssue){cls="lr";badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;}
+    else{cls="lg";badge=`<span class="lbadge bgg">✅ All Clear</span>`;}
+    const meta=last
+      ?`<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
+      :`<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
+    return`<div class="lcard ${cls}"><div class="lname">${loc}</div>${badge}<div class="lmeta">${meta}</div></div>`;
+  }).join("");
+}
+
+function renderOpenIssues(){
+  const el=document.getElementById("open-issues");
+  const items=DATA.openIssues||[];
+  if(!items.length){el.innerHTML=`<div class="none">✅ No open issues in the last 48 hours!</div>`;return;}
+  el.innerHTML=items.map(r=>{
+    const t=(r.issues||[]).filter(i=>i!=="No Issues Found").join(", ");
+    return`<li class="iitem"><span class="idot"></span>
+      <div><div class="iloc">${r.location}</div><div class="itype">${t}</div>
+      <div class="imeta">Reported by ${r.inspector}</div></div>
+      <div class="itime">${timeAgo(new Date(r.timestamp))}</div></li>`;
+  }).join("");
+}
+
+function renderInspectors(){
+  const el=document.getElementById("insp-grid");
+  const c=DATA.inspectorCounts||{};
+  const max=Math.max(...INSPECTORS.map(n=>c[n]||0),1);
+  el.innerHTML=INSPECTORS.map(name=>{
+    const n=c[name]||0, pct=Math.round(n/max*100);
+    const s=name.split(" ")[0]+" "+name.split(" ").slice(-1)[0];
+    return`<div class="icard" style="${n===0?"opacity:0.5":""}">
+      <div class="iname">${s}</div><div class="inum">${n}</div>
+      <div class="isub">${n===1?"check":"checks"} today</div>
+      <div class="ibar-w"><div class="ibar" style="width:${pct}%;background:${n?"var(--navy)":"var(--border)"}"></div></div>
+    </div>`;
+  }).join("");
+}
+
+function renderCharts(){
+  const hourly=DATA.hourly||[];
+  const hl=Array.from({length:13},(_,i)=>{const h=i+6;return h<12?`${h}am`:h===12?"12pm":`${h-12}pm`;});
+  if(chH)chH.destroy();
+  chH=new Chart(document.getElementById("ch-hour"),{type:"bar",data:{labels:hl,datasets:[
+    {label:"All Clear",data:hl.map((_,i)=>(hourly[i+6]||{}).clear||0),backgroundColor:"#86efac",borderRadius:3},
+    {label:"Issue",data:hl.map((_,i)=>(hourly[i+6]||{}).issue||0),backgroundColor:"#fca5a5",borderRadius:3},
+  ]},options:bOpts({stacked:true})});
+
+  const bl=DATA.byLocation||{};
+  const lv=LOCATIONS.map(l=>bl[l]||0);
+  const ls=LOCATIONS.map(l=>l.replace(" Restroom","").replace(" Locker Room","").replace("Auxiliary","Aux."));
+  if(chL)chL.destroy();
+  chL=new Chart(document.getElementById("ch-loc"),{type:"bar",data:{labels:ls,datasets:[
+    {label:"Issues",data:lv,backgroundColor:lv.map(v=>v>=5?"#fca5a5":v>=2?"#fde68a":"#86efac"),borderRadius:3}
+  ]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:"#f3f4f6"},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+  const daily=DATA.daily||[];
+  if(chW)chW.destroy();
+  chW=new Chart(document.getElementById("ch-week"),{type:"bar",data:{labels:daily.map(d=>d.date),datasets:[
+    {label:"All Clear",data:daily.map(d=>d.clear),backgroundColor:"#86efac",borderRadius:3,stack:"s"},
+    {label:"Issues",data:daily.map(d=>d.issue),backgroundColor:"#fca5a5",borderRadius:3,stack:"s"},
+  ]},options:bOpts({stacked:true})});
+}
+
+function bOpts({stacked=false}={}){return{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{position:"bottom",labels:{font:{size:11},boxWidth:12,padding:10}}},
+  scales:{x:{stacked,grid:{display:false},ticks:{font:{size:10}}},
+          y:{stacked,grid:{color:"#f3f4f6"},ticks:{font:{size:10},stepSize:1}}}};}
+
+function populateFilters(){
+  const rows=DATA.recentLog||[];
+  const locs=[...new Set(rows.map(r=>r.location))].sort();
+  const whos=[...new Set(rows.map(r=>r.inspector))].sort();
+  const fl=document.getElementById("fl"),fw=document.getElementById("fw");
+  const cl=fl.value,cw=fw.value;
+  fl.innerHTML=`<option value="">All Locations</option>`+locs.map(l=>`<option ${l===cl?"selected":""}>${l}</option>`).join("");
+  fw.innerHTML=`<option value="">All Inspectors</option>`+whos.map(w=>`<option ${w===cw?"selected":""}>${w}</option>`).join("");
+}
+
+function renderTable(){
+  const loc=document.getElementById("fl").value;
+  const stat=document.getElementById("fs").value;
+  const who=document.getElementById("fw").value;
+  let rows=(DATA&&DATA.recentLog)?[...DATA.recentLog]:[];
+  if(loc)rows=rows.filter(r=>r.location===loc);
+  if(stat==="clear")rows=rows.filter(r=>!r.hasIssue);
+  if(stat==="issue")rows=rows.filter(r=>r.hasIssue);
+  if(who)rows=rows.filter(r=>r.inspector===who);
+  rows=rows.slice(0,60);
+  const tb=document.getElementById("tbody");
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="7" class="loading">No records match.</td></tr>`;return;}
+  tb.innerHTML=rows.map(r=>{
+    const badge=r.hasIssue?`<span class="badge bg-red">⚠️ Issues</span>`:`<span class="badge bg-green">✅ Clear</span>`;
+    const iss=r.hasIssue?(r.issues||[]).filter(i=>i!=="No Issues Found").join(", "):"—";
+    const photo=r.photos?`<a href="${r.photos}" target="_blank" style="color:var(--navy);font-weight:600;font-size:.72rem">📷 View</a>`:`<span style="color:var(--gray)">—</span>`;
+    return`<tr><td>${r.date}</td><td style="font-variant-numeric:tabular-nums">${r.time}</td>
+      <td style="font-weight:600">${r.location}</td><td>${r.inspector}</td>
+      <td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;color:${r.hasIssue?"var(--red)":"var(--gray)"}">${iss}</td>
+      <td>${badge}</td><td>${photo}</td></tr>`;
+  }).join("");
+}
+
+// ── DEMO DATA ────────────────────────────────────────────────
+function loadDemo(){
+  const ISS=["Out of Paper Towels","Out of Soap","Sink Faucet Issue","Strong Odor","Cleanliness Issue","Out of Toilet Paper","Graffiti"];
+  const rows=[];
+  for(let d=13;d>=0;d--){
+    const n=5+Math.floor(Math.random()*8);
+    for(let i=0;i<n;i++){
+      const dt=new Date();dt.setDate(dt.getDate()-d);
+      dt.setHours(7+Math.floor(Math.random()*10),Math.floor(Math.random()*60));
+      const hi=Math.random()<0.2;
+      rows.push({timestamp:dt.toISOString(),
+        date:dt.toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"numeric"}),
+        time:dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}),
+        hour:dt.getHours(),
+        inspector:INSPECTORS[Math.floor(Math.random()*INSPECTORS.length)],
+        location:LOCATIONS[Math.floor(Math.random()*LOCATIONS.length)],
+        issues:hi?ISS.slice(0,1+Math.floor(Math.random()*2)):["No Issues Found"],
+        hasIssue:hi,notes:"",photos:""});
+    }
+  }
+  rows.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+  const today=new Date().toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"numeric"});
+  const tr=rows.filter(r=>r.date===today);
+  const hourly=Array(24).fill(0).map(()=>({clear:0,issue:0}));
+  rows.forEach(r=>{const h=new Date(r.timestamp).getHours();if(r.hasIssue)hourly[h].issue++;else hourly[h].clear++;});
+  const daily=[];
+  for(let d=13;d>=0;d--){
+    const dt=new Date();dt.setDate(dt.getDate()-d);
+    const ds=dt.toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"numeric"});
+    const dr=rows.filter(r=>r.date===ds);
+    daily.push({date:dt.toLocaleDateString("en-US",{month:"numeric",day:"numeric"}),
+      clear:dr.filter(r=>!r.hasIssue).length,issue:dr.filter(r=>r.hasIssue).length});
+  }
+  const bl={};rows.filter(r=>r.hasIssue).forEach(r=>{bl[r.location]=(bl[r.location]||0)+1;});
+  const ls={};rows.forEach(r=>{if(!ls[r.location]||new Date(r.timestamp)>new Date(ls[r.location].timestamp))ls[r.location]=r;});
+  const ic={};tr.forEach(r=>{ic[r.inspector]=(ic[r.inspector]||0)+1;});
+  const cut=new Date(Date.now()-48*3600000);
+  const oi=rows.filter(r=>r.hasIssue&&new Date(r.timestamp)>=cut).slice(0,10);
+  DATA={todayCount:tr.length,todayClear:tr.filter(r=>!r.hasIssue).length,
+    todayIssues:tr.filter(r=>r.hasIssue).length,openIssueCount:oi.length,
+    locationsCovered:new Set(tr.map(r=>r.location)).size,
+    weekCount:rows.filter(r=>(Date.now()-new Date(r.timestamp))/86400000<7).length,
+    locationStatus:ls,inspectorCounts:ic,openIssues:oi,recentLog:rows,hourly,daily,byLocation:bl};
+  renderAll();
+}
+
+function $(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function timeAgo(dt){
+  const m=Math.floor((Date.now()-dt)/60000);
+  if(m<1)return"just now";if(m<60)return`${m}m ago`;
+  const h=Math.floor(m/60);if(h<24)return`${h}h ago`;
+  return`${Math.floor(h/24)}d ago`;
+}
+
+fetchData();
+setInterval(fetchData,REFRESH_MS);
+</script>
+</body>
+</html>
