@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SFDS Facility Inspection</title>
+<style>
+/* ── BASE ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #1a3a5c;
+  --red:  #b91c1c;
+  --green:#15803d;
+  --gray: #6b7280;
+  --border:#d1d5db;
+  --bg:  #f3f4f6;
+  --white:#ffffff;
+  --text: #111827;
+  --radius:10px;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px; }
+
+/* ── HEADER ───────────────────────────────────────────── */
+.top-bar { background: var(--red); height: 5px; }
+header {
+  background: var(--navy); color: white;
+  padding: 14px 20px 12px; text-align: center;
+}
+header h1 { font-size: 1rem; font-weight: 700; }
+header p  { font-size: 0.75rem; opacity: 0.65; margin-top: 3px; }
+
+/* ── MAIN ─────────────────────────────────────────────── */
+main { max-width: 540px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* ── LOCATION BANNER ─────────────────────────────────── */
+.loc-banner {
+  background: var(--navy); color: white;
+  border-radius: var(--radius); padding: 14px 18px;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 12px;
+  border-left: 5px solid var(--red);
+}
+.loc-icon { font-size: 1.6rem; flex-shrink: 0; }
+.loc-text p  { font-size: 0.7rem; opacity: 0.65; text-transform: uppercase;
+               letter-spacing: 0.08em; margin-bottom: 2px; }
+.loc-text h2 { font-size: 1.05rem; font-weight: 700; }
+
+/* ── CARD ─────────────────────────────────────────────── */
+.card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.card-title {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--red);
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── INPUTS ───────────────────────────────────────────── */
+label { display: block; font-size: 0.85rem; font-weight: 600;
+        color: var(--navy); margin-bottom: 6px; }
+select, textarea, input[type=text] {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 7px;
+  padding: 10px 12px; font-size: 0.9rem; color: var(--text);
+  background: white; outline: none; transition: border-color 0.15s;
+  -webkit-appearance: none; appearance: none;
+}
+select:focus, textarea:focus, input:focus { border-color: var(--navy); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+         background-repeat: no-repeat; background-position: right 12px center;
+         padding-right: 36px; }
+textarea { resize: vertical; min-height: 80px; }
+
+/* ── ACCESS CODE SECTION ─────────────────────────────── */
+#access-section { transition: all 0.3s; }
+.code-note {
+  font-size: 0.75rem; color: var(--gray); margin-top: 6px;
+  display: flex; align-items: center; gap: 5px;
+}
+.code-remembered {
+  background: #f0fdf4; border: 1.5px solid #86efac;
+  border-radius: 7px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--green);
+  font-weight: 600;
+}
+.code-remembered button {
+  margin-left: auto; background: none; border: none;
+  color: var(--gray); font-size: 0.72rem; cursor: pointer; text-decoration: underline;
+}
+
+/* ── ISSUE CHECKBOXES ────────────────────────────────── */
+.issue-list { display: flex; flex-direction: column; gap: 8px; }
+.issue-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1.5px solid var(--border);
+  border-radius: 7px; cursor: pointer; transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.issue-item:active { transform: scale(0.98); }
+.issue-item.checked {
+  border-color: var(--red); background: #fff5f5;
+}
+.issue-item.no-issue.checked {
+  border-color: var(--green); background: #f0fdf4;
+}
+.issue-item input[type=checkbox] { display: none; }
+.check-box {
+  width: 22px; height: 22px; border: 2px solid var(--border);
+  border-radius: 5px; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+}
+.issue-item.checked     .check-box { background: var(--red);   border-color: var(--red); }
+.issue-item.no-issue.checked .check-box { background: var(--green); border-color: var(--green); }
+.check-icon { color: white; font-size: 13px; display: none; }
+.issue-item.checked .check-icon { display: block; }
+.issue-label { font-size: 0.88rem; color: var(--text); }
+.issue-item.no-issue .issue-label { font-weight: 600; color: var(--green); }
+
+/* ── PHOTO UPLOAD ─────────────────────────────────────── */
+.photo-area {
+  border: 2px dashed var(--border); border-radius: 7px;
+  padding: 20px; text-align: center; cursor: pointer;
+  transition: border-color 0.15s; position: relative;
+}
+.photo-area:hover, .photo-area.dragover { border-color: var(--navy); }
+.photo-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-icon { font-size: 2rem; margin-bottom: 6px; }
+.photo-area p { font-size: 0.82rem; color: var(--gray); }
+.photo-area strong { color: var(--navy); }
+.photo-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.photo-thumb {
+  width: 60px; height: 60px; border-radius: 6px;
+  object-fit: cover; border: 2px solid var(--border);
+}
+
+/* ── SUBMIT ───────────────────────────────────────────── */
+.submit-btn {
+  width: 100%; background: var(--navy); color: white; border: none;
+  border-radius: 10px; padding: 16px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; margin-top: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.submit-btn:hover { background: #244f7d; }
+.submit-btn:active { transform: scale(0.99); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── SUCCESS SCREEN ──────────────────────────────────── */
+#success {
+  display: none; text-align: center; padding: 50px 20px;
+  max-width: 400px; margin: 0 auto;
+}
+#success .big-check { font-size: 5rem; margin-bottom: 16px; }
+#success h2 { font-size: 1.4rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+#success p  { color: var(--gray); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.6; }
+.another-btn {
+  background: var(--red); color: white; border: none;
+  border-radius: 10px; padding: 14px 28px; font-size: 0.95rem;
+  font-weight: 700; cursor: pointer;
+}
+
+/* ── FOOTER ───────────────────────────────────────────── */
+footer {
+  text-align: center; font-size: 0.7rem; color: var(--gray);
+  padding: 16px; margin-top: 8px;
+}
+
+/* ── VALIDATION ───────────────────────────────────────── */
+.field-error { border-color: var(--red) !important; }
+.error-msg { color: var(--red); font-size: 0.75rem; margin-top: 4px; display: none; }
+.error-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="top-bar"></div>
+<header>
+  <h1>St. Francis de Sales High School</h1>
+  <p>Facilities &amp; Maintenance · Inspection Report</p>
+</header>
+
+<main>
+
+  <!-- LOCATION BANNER -->
+  <div class="loc-banner">
+    <div class="loc-icon">📍</div>
+    <div class="loc-text">
+      <p>Inspecting</p>
+      <h2 id="loc-display">Loading location…</h2>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div id="form-area">
+
+    <!-- ACCESS CODE -->
+    <div class="card" id="access-section">
+      <div class="card-title">🔐 Staff Verification</div>
+      <div id="code-remembered-msg" class="code-remembered" style="display:none">
+        <span>✅ Access code saved on this device</span>
+        <button onclick="forgetCode()">Forget</button>
+      </div>
+      <div id="code-input-area">
+        <label for="access-code">Staff Access Code</label>
+        <input type="text" id="access-code" placeholder="Enter your access code"
+               autocomplete="off" autocorrect="off" autocapitalize="characters"
+               spellcheck="false">
+        <p class="code-note">🔒 First time only — your phone will remember this</p>
+        <p class="error-msg" id="code-error">Access code required</p>
+      </div>
+    </div>
+
+    <!-- YOUR NAME -->
+    <div class="card">
+      <div class="card-title">👤 Inspector</div>
+      <label for="inspector-name">Your Name</label>
+      <select id="inspector-name">
+        <option value="">— Select your name —</option>
+        <option>Ken Westenkirchner</option>
+        <option>Matt Prater</option>
+        <option>Corey Driver</option>
+        <option>Murell Gregory</option>
+        <option>Khyle Weirich</option>
+        <option>Paris Martin</option>
+        <option>Michael Hagmeyer</option>
+      </select>
+      <p class="error-msg" id="name-error">Please select your name</p>
+    </div>
+
+    <!-- ISSUES -->
+    <div class="card">
+      <div class="card-title">🔍 Issues Found</div>
+      <div class="issue-list" id="issue-list">
+        <!-- populated by JS -->
+      </div>
+      <p class="error-msg" id="issue-error">Please select at least one option</p>
+    </div>
+
+    <!-- NOTES -->
+    <div class="card" id="notes-card" style="display:none">
+      <div class="card-title">📝 Additional Notes</div>
+      <label for="notes">Describe the issue(s) in more detail</label>
+      <textarea id="notes" placeholder="Optional — describe what you found…"></textarea>
+    </div>
+
+    <!-- PHOTOS -->
+    <div class="card" id="photos-card" style="display:none">
+      <div class="card-title">📷 Photos</div>
+      <div class="photo-area" id="photo-area">
+        <input type="file" id="photo-input" accept="image/*" multiple
+               onchange="handlePhotos(this)">
+        <div class="photo-icon">📸</div>
+        <p><strong>Tap to take or upload photos</strong></p>
+        <p>Optional — attach photos of any issues</p>
+      </div>
+      <div class="photo-previews" id="photo-previews"></div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+      Submit Inspection Report
+    </button>
+
+  </div><!-- /form-area -->
+
+  <!-- SUCCESS -->
+  <div id="success">
+    <div class="big-check" id="success-icon">✅</div>
+    <h2 id="success-title">Report Submitted!</h2>
+    <p id="success-msg">Your inspection has been logged. Thank you for keeping our facility safe and clean.</p>
+    <button class="another-btn" onclick="resetForm()">Submit Another</button>
+  </div>
+
+</main>
+
+<footer>St. Francis de Sales High School · Facility Inspection System</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIGURATION — update these two values
+// ══════════════════════════════════════════════════════════
+
+// Your Google Form's base URL (between /e/ and /viewform)
+const FORM_ID = "1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ";
+
+// The entry IDs from your Google Form pre-fill URL
+// Get these by clicking ⋮ > "Get pre-filled link" in your form
+const ENTRY = {
+  accessCode: "677547390",   // Staff Access Code
+  inspector:  "1736125068",  // Your Name
+  location:   "1902915184",                 // entry ID for location field ✅ already known
+  issues:     "173778779",   // Issues Found
+  notes:      "1237607443",  // Additional Notes
+};
+
+// Access code — share only with your 7 staff members
+const VALID_CODE = "SFDS2025";   // ← change this to whatever you want
+
+// ── Issues list ───────────────────────────────────────────
+const ISSUES = [
+  { id: "no-issue",    label: "✅  No Issues Found",              noIssue: true },
+  { id: "clogged",     label: "Toilet / Urinal Clogged or Overflowing" },
+  { id: "no-tp",       label: "Out of Toilet Paper" },
+  { id: "no-towels",   label: "Out of Paper Towels" },
+  { id: "no-soap",     label: "Out of Soap" },
+  { id: "dryer",       label: "Hand Dryer Not Working" },
+  { id: "sink",        label: "Sink Faucet Issue (dripping / broken)" },
+  { id: "flood",       label: "Flood / Standing Water" },
+  { id: "graffiti",    label: "Graffiti" },
+  { id: "door",        label: "Broken Door / Lock" },
+  { id: "lighting",    label: "Lighting Issue" },
+  { id: "odor",        label: "Strong Odor" },
+  { id: "fixture",     label: "Broken / Damaged Fixture" },
+  { id: "cleanliness", label: "Cleanliness Issue" },
+  { id: "other",       label: "Other (describe in notes)" },
+];
+
+// ── Runtime state ─────────────────────────────────────────
+let currentLocation = "";
+let selectedIssues  = new Set();
+let photoFiles      = [];
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+window.addEventListener("DOMContentLoaded", () => {
+  readLocationFromURL();
+  buildIssueList();
+  initAccessCode();
+  restoreName();
+});
+
+// ── Read location from URL parameter ─────────────────────
+function readLocationFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  // Try the known entry ID first, then fallback to ?location=
+  currentLocation =
+    params.get("entry.1902915184") ||
+    params.get("entry." + ENTRY.location) ||
+    params.get("location") ||
+    "";
+
+  // Decode any URL encoding (e.g. + → space, %27 → ')
+  currentLocation = decodeURIComponent(currentLocation.replace(/\+/g, " "));
+
+  document.getElementById("loc-display").textContent =
+    currentLocation || "Unknown Location";
+}
+
+// ── Build issue checkboxes ────────────────────────────────
+function buildIssueList() {
+  const list = document.getElementById("issue-list");
+  list.innerHTML = ISSUES.map(issue => `
+    <label class="issue-item${issue.noIssue ? " no-issue" : ""}" id="item-${issue.id}"
+           onclick="toggleIssue('${issue.id}', ${!!issue.noIssue})">
+      <div class="check-box"><span class="check-icon">✓</span></div>
+      <span class="issue-label">${issue.label}</span>
+    </label>
+  `).join("");
+}
+
+function toggleIssue(id, isNoIssue) {
+  if (isNoIssue) {
+    // Selecting "No Issues" clears everything else
+    selectedIssues.clear();
+    ISSUES.forEach(i => document.getElementById("item-" + i.id).classList.remove("checked"));
+    if (!selectedIssues.has(id)) {
+      selectedIssues.add(id);
+      document.getElementById("item-" + id).classList.add("checked");
+    } else {
+      selectedIssues.delete(id);
+    }
+  } else {
+    // Selecting an issue clears "No Issues"
+    selectedIssues.delete("no-issue");
+    document.getElementById("item-no-issue").classList.remove("checked");
+
+    if (selectedIssues.has(id)) {
+      selectedIssues.delete(id);
+      document.getElementById("item-" + id).classList.remove("checked");
+    } else {
+      selectedIssues.add(id);
+      document.getElementById("item-" + id).classList.add("checked");
+    }
+  }
+
+  // Show notes / photos cards when issues are selected
+  const hasRealIssues = [...selectedIssues].some(i => i !== "no-issue");
+  document.getElementById("notes-card").style.display  = hasRealIssues ? "block" : "none";
+  document.getElementById("photos-card").style.display = hasRealIssues ? "block" : "none";
+  document.getElementById("issue-error").classList.remove("show");
+}
+
+// ══════════════════════════════════════════════════════════
+//  ACCESS CODE — remembered on device after first use
+// ══════════════════════════════════════════════════════════
+function initAccessCode() {
+  const saved = localStorage.getItem("sfds_access_code");
+  if (saved) {
+    // Code already saved — show confirmation, hide input
+    document.getElementById("code-remembered-msg").style.display = "flex";
+    document.getElementById("code-input-area").style.display = "none";
+  }
+}
+
+function forgetCode() {
+  localStorage.removeItem("sfds_access_code");
+  document.getElementById("code-remembered-msg").style.display = "none";
+  document.getElementById("code-input-area").style.display = "block";
+  document.getElementById("access-code").value = "";
+}
+
+// ── Inspector name — remembered per device ────────────────
+function restoreName() {
+  const saved = localStorage.getItem("sfds_inspector_name");
+  if (saved) {
+    const sel = document.getElementById("inspector-name");
+    // Find and select the matching option
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === saved) {
+        sel.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
+
+// ── Photo handling ────────────────────────────────────────
+function handlePhotos(input) {
+  photoFiles = [...input.files];
+  const previews = document.getElementById("photo-previews");
+  previews.innerHTML = "";
+  photoFiles.forEach(file => {
+    const img = document.createElement("img");
+    img.className = "photo-thumb";
+    img.src = URL.createObjectURL(file);
+    previews.appendChild(img);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  SUBMIT
+// ══════════════════════════════════════════════════════════
+function submitForm() {
+  if (!validate()) return;
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+
+  // Save access code and name to device for next time
+  const codeInput = document.getElementById("access-code");
+  const savedCode = localStorage.getItem("sfds_access_code");
+  const codeToUse = savedCode || codeInput.value.trim().toUpperCase();
+  localStorage.setItem("sfds_access_code", codeToUse);
+
+  const inspectorName = document.getElementById("inspector-name").value;
+  localStorage.setItem("sfds_inspector_name", inspectorName);
+
+  // Map selected issue IDs back to display labels
+  const issueLabels = ISSUES
+    .filter(i => selectedIssues.has(i.id))
+    .map(i => i.label.replace("✅  ", ""));
+
+  // Build Google Form submission URL
+  // NOTE: Google Forms accepts GET submissions via this URL format
+  const params = new URLSearchParams();
+  params.set("entry." + ENTRY.location,   currentLocation);
+  params.set("entry." + ENTRY.inspector,  inspectorName);
+  params.set("entry." + ENTRY.notes,      document.getElementById("notes").value || "");
+
+  // Build the form post URL (we use a hidden iframe to submit silently)
+  const formActionURL =
+    `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
+
+  // We submit via a hidden form POST so the user stays on this page
+  const hiddenForm = document.createElement("form");
+  hiddenForm.method = "POST";
+  hiddenForm.action = formActionURL;
+  hiddenForm.target = "hidden-iframe";
+  hiddenForm.style.display = "none";
+
+  function addField(name, value) {
+    const inp = document.createElement("input");
+    inp.type = "hidden"; inp.name = name; inp.value = value;
+    hiddenForm.appendChild(inp);
+  }
+
+  addField("entry." + ENTRY.accessCode, codeToUse);
+  addField("entry." + ENTRY.inspector,  inspectorName);
+  addField("entry." + ENTRY.location,   currentLocation);
+  addField("entry." + ENTRY.notes,      document.getElementById("notes").value || "");
+
+  // Issues — each checkbox value submitted separately
+  issueLabels.forEach(label => {
+    addField("entry." + ENTRY.issues, label);
+  });
+
+  document.body.appendChild(hiddenForm);
+
+  // Create hidden iframe to catch the response (avoids page redirect)
+  let iframe = document.getElementById("hidden-iframe");
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.name = "hidden-iframe";
+    iframe.id   = "hidden-iframe";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+  }
+
+  hiddenForm.submit();
+  hiddenForm.remove();
+
+  // Show success after short delay (form POST is fire-and-forget)
+  setTimeout(() => showSuccess(issueLabels), 1200);
+}
+
+// ── Validation ────────────────────────────────────────────
+function validate() {
+  let ok = true;
+
+  // Access code
+  const savedCode = localStorage.getItem("sfds_access_code");
+  if (!savedCode) {
+    const entered = document.getElementById("access-code").value.trim().toUpperCase();
+    if (entered !== VALID_CODE) {
+      document.getElementById("access-code").classList.add("field-error");
+      document.getElementById("code-error").textContent =
+        entered === "" ? "Access code required" : "Incorrect access code";
+      document.getElementById("code-error").classList.add("show");
+      ok = false;
+    }
+  }
+
+  // Name
+  if (!document.getElementById("inspector-name").value) {
+    document.getElementById("inspector-name").classList.add("field-error");
+    document.getElementById("name-error").classList.add("show");
+    ok = false;
+  } else {
+    document.getElementById("inspector-name").classList.remove("field-error");
+    document.getElementById("name-error").classList.remove("show");
+  }
+
+  // Issues
+  if (selectedIssues.size === 0) {
+    document.getElementById("issue-error").classList.add("show");
+    ok = false;
+  }
+
+  if (!ok) {
+    // Scroll to first error
+    document.querySelector(".field-error, .error-msg.show")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  return ok;
+}
+
+// ── Success screen ────────────────────────────────────────
+function showSuccess(issueLabels) {
+  const hasIssues = issueLabels.some(l => l !== "No Issues Found");
+
+  document.getElementById("form-area").style.display = "none";
+  document.getElementById("success").style.display   = "block";
+  document.getElementById("success-icon").textContent  = hasIssues ? "⚠️" : "✅";
+  document.getElementById("success-title").textContent = hasIssues
+    ? "Issue Reported!" : "All Clear — Thank You!";
+  document.getElementById("success-msg").textContent = hasIssues
+    ? "Your report has been logged and the maintenance team has been notified. Thank you for keeping our facility safe."
+    : "Your inspection has been logged. Thank you for keeping our facility safe and clean.";
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = false;
+  btn.textContent = "Submit Inspection Report";
+}
+
+function resetForm() {
+  selectedIssues.clear();
+  photoFiles = [];
+  document.getElementById("form-area").style.display = "block";
+  document.getElementById("success").style.display   = "none";
+  document.getElementById("notes").value = "";
+  document.getElementById("photo-previews").innerHTML = "";
+  document.getElementById("notes-card").style.display  = "none";
+  document.getElementById("photos-card").style.display = "none";
+  ISSUES.forEach(i => document.getElementById("item-" + i.id)?.classList.remove("checked"));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+</script>
+</body>
+</html>
