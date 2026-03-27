@@ -334,16 +334,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // ── Read location from URL parameter ─────────────────────
 function readLocationFromURL() {
+  // URLSearchParams already decodes %xx and + for us — do NOT call
+  // decodeURIComponent again or slashes get double-decoded and break matching.
   const params = new URLSearchParams(window.location.search);
-  // Try the known entry ID first, then fallback to ?location=
+
   currentLocation =
     params.get("entry.1902915184") ||
     params.get("entry." + ENTRY.location) ||
     params.get("location") ||
     "";
 
-  // Decode any URL encoding (e.g. + → space, %27 → ')
-  currentLocation = decodeURIComponent(currentLocation.replace(/\+/g, " "));
+  // Trim any accidental whitespace
+  currentLocation = currentLocation.trim();
 
   document.getElementById("loc-display").textContent =
     currentLocation || "Unknown Location";
