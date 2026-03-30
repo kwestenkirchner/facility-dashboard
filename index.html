@@ -168,7 +168,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f9fafb;}
   <div class="hinner">
     <div class="htitle">
       <h1>🏫 St. Francis de Sales — Facility Inspection Dashboard</h1>
-      <p>Restroom &amp; Locker Room Monitoring · Authorized Personnel Only</p>
+      <p>St. Francis de Sales High School · Restroom &amp; Locker Room Monitoring</p>
     </div>
     <div class="hright">
       <div class="live-pill"><span class="live-dot"></span>LIVE</div>
@@ -275,13 +275,20 @@ const ENDPOINT = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsT
 
 const REFRESH_MS = 120000; // auto-refresh every 2 minutes
 
+// ── LOCATION NAMES — must match Google Form dropdown exactly ─
 const LOCATIONS = [
-  "3rd Floor / 200 Level Restroom","2nd Floor / 100 Level Restroom",
-  "Cafeteria Men's Restroom","Cafeteria Women's Restroom",
-  "West Lobby Men's Restroom","West Lobby Women's Restroom",
-  "Auxiliary Locker Room 1 - North","Auxiliary Locker Room 2 - South",
-  "7th/8th Grade Locker Room","Swim Locker Room",
+  "3rd Floor Restroom",
+  "2nd Floor Restroom",
+  "Cafeteria Mens Restroom",
+  "Cafeteria Womens Restroom",
+  "West Lobby Mens Restroom",
+  "West Lobby Womens Restroom",
+  "Auxiliary Locker Room 1 - North",
+  "Auxiliary Locker Room 2 - South",
+  "7th and 8th Grade Locker Room",
+  "Swim Locker Room",
 ];
+
 const INSPECTORS = [
   "Ken Westenkirchner","Matt Prater","Corey Driver",
   "Murell Gregory","Khyle Weirich","Paris Martin","Michael Hagmeyer"
