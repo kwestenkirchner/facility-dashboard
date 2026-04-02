@@ -294,20 +294,7 @@ const INSPECTORS = [
 ];
  
 let DATA=null, chH, chL, chW;
-
-// ✅ Fix Google Drive links → usable image URLs
-function convertDriveLink(url) {
-  try {
-    const match = url.match(/\/d\/(.*?)\//);
-    if (match) {
-      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-    }
-    return url;
-  } catch (e) {
-    return url;
-  }
-}  
-
+ 
 // Clock
 setInterval(()=>{
   document.getElementById("clock").textContent=
@@ -342,12 +329,12 @@ async function fetchData(){
 }
  
 // ── RESOLVE ISSUE ────────────────────────────────────────────
-async function resolveIssue(timestamp, btnEl){
+async function resolveIssue(sheetRow, btnEl){
   btnEl.disabled=true; btnEl.textContent="Resolving…";
   try{
     const res = await fetch(ENDPOINT, {
       method: "POST",
-      body: JSON.stringify({ action: "resolve", timestamp }),
+      body: JSON.stringify({ action: "resolve", sheetRow }),
     });
     const data = await res.json();
     if(data.success){
@@ -398,19 +385,14 @@ function renderOpenIssues(){
     const isResolved = r.resolved;
  
     // Photo links
- const photoLinks = (r.photos||[]).map((url,i)=>{
-  const fixed = convertDriveLink(url);
-  return `
-    <a href="${fixed}" target="_blank">
-      <img src="${fixed}" style="width:50px;height:50px;object-fit:cover;border-radius:6px;margin-right:4px;">
-    </a>
-  `;
-}).join("");
+    const photoLinks = (r.photos||[]).map((url,i)=>
+      `<a class="photo-link" href="${url}" target="_blank">📷 Photo ${i+1}</a>`
+    ).join(" ");
  
     // Action area — resolve button or resolved tag
     const actionHtml = isResolved
       ? `<span class="resolved-tag">✅ Resolved</span>`
-      : `<button class="resolve-btn" onclick="resolveIssue('${r.timestamp}', this)">✔ Resolve</button>`;
+      : `<button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>`;
  
     return`<li class="iitem${isResolved?" resolved":""}">
       <span class="idot${isResolved?" resolved-dot":""}"></span>
@@ -501,16 +483,9 @@ function renderTable(){
     const badge=r.hasIssue?`<span class="badge bg-red">⚠️ Issues</span>`:`<span class="badge bg-green">✅ Clear</span>`;
     const iss=r.hasIssue?(r.issues||[]).filter(i=>i!=="No Issues Found").join(", "):"—";
     // Build photo links for table
-const photoHtml=(r.photos&&r.photos.length>0)
-  ? r.photos.map((url,i)=>{
-      const fixed = convertDriveLink(url);
-      return `
-        <a href="${fixed}" target="_blank">
-          <img src="${fixed}" style="width:40px;height:40px;object-fit:cover;border-radius:5px;margin-right:4px;">
-        </a>
-      `;
-    }).join("")
-  : `<span style="color:var(--gray)">—</span>`;
+    const photoHtml=(r.photos&&r.photos.length>0)
+      ? r.photos.map((url,i)=>`<a href="${url}" target="_blank" style="color:var(--navy);font-weight:600;font-size:.72rem;margin-right:6px;">📷 ${i+1}</a>`).join("")
+      : `<span style="color:var(--gray)">—</span>`;
     return`<tr><td>${r.date}</td><td style="font-variant-numeric:tabular-nums">${r.time}</td>
       <td style="font-weight:600">${r.location}</td><td>${r.inspector}</td>
       <td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;color:${r.hasIssue?"var(--red)":"var(--gray)"}">${iss}</td>
@@ -531,4 +506,3 @@ setInterval(fetchData,REFRESH_MS);
 </script>
 </body>
 </html>
- 
