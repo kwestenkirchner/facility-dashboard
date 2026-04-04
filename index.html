@@ -17,35 +17,15 @@
   </header>
 
   <main class="container">
-    <!-- Top row: 6 cards -->
     <section class="cards">
-      <div class="card">
-        <h2>Today Total</h2>
-        <p id="today-count" class="card-number">--</p>
-      </div>
-      <div class="card">
-        <h2>Today Clear</h2>
-        <p id="today-clear" class="card-number">--</p>
-      </div>
-      <div class="card card-issue">
-        <h2>Today Issues</h2>
-        <p id="today-issues" class="card-number">--</p>
-      </div>
-      <div class="card">
-        <h2>Open Issues</h2>
-        <p id="open-issues" class="card-number">--</p>
-      </div>
-      <div class="card">
-        <h2>Locations Covered</h2>
-        <p id="locations-covered" class="card-number">--</p>
-      </div>
-      <div class="card">
-        <h2>Week Count</h2>
-        <p id="week-count" class="card-number">--</p>
-      </div>
+      <div class="card"><h2>Today Total</h2><p id="today-count" class="card-number">--</p></div>
+      <div class="card"><h2>Today Clear</h2><p id="today-clear" class="card-number">--</p></div>
+      <div class="card card-issue"><h2>Today Issues</h2><p id="today-issues" class="card-number">--</p></div>
+      <div class="card"><h2>Open Issues</h2><p id="open-issues" class="card-number">--</p></div>
+      <div class="card"><h2>Locations Covered</h2><p id="locations-covered" class="card-number">--</p></div>
+      <div class="card"><h2>Week Count</h2><p id="week-count" class="card-number">--</p></div>
     </section>
 
-    <!-- Middle: 2 charts (Hourly, Daily) -->
     <section class="charts-row">
       <div class="chart-card">
         <h3>Hourly Activity</h3>
@@ -57,7 +37,6 @@
       </div>
     </section>
 
-    <!-- Bottom: Open Issues (left) + Recent Log (right) -->
     <section class="flex-row">
       <div class="panel">
         <h3>Open Issues (Last 48 Hours)</h3>
@@ -72,9 +51,7 @@
               <th>Resolve</th>
             </tr>
           </thead>
-          <tbody id="open-issues-body">
-            <!-- Filled by JS -->
-          </tbody>
+          <tbody id="open-issues-body"></tbody>
         </table>
       </div>
 
@@ -91,9 +68,7 @@
               <th>Inspector</th>
             </tr>
           </thead>
-          <tbody id="recent-log-body">
-            <!-- Filled by JS -->
-          </tbody>
+          <tbody id="recent-log-body"></tbody>
         </table>
       </div>
     </section>
