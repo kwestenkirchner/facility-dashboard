@@ -1,191 +1,210 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
+/* GLOBAL RESET */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
 
-let hourlyChart, dailyChart;
+body {
+  background: #f5f7fa;
+  color: #111827;
+}
 
-async function fetchData() {
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+/* HEADER */
+.top-bar {
+  background: #001F3F; /* Navy */
+  color: #ffffff;
+  padding: 16px 24px;
+  border-bottom: 4px solid #B3001B; /* Crimson accent */
+}
 
-    if (data.error) {
-      console.error("API error:", data.error);
-      document.getElementById("last-updated").textContent = "Error: " + data.error;
-      return;
-    }
+.top-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
 
-    document.getElementById("last-updated").textContent =
-      "Last updated: " + new Date().toLocaleString();
+.top-bar h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: center;
+}
 
-    updateSummaryCards(data);
-    renderOpenIssues(data.openIssues);
-    renderRecentLog(data.recentLog);
-    renderCharts(data);
-  } catch (err) {
-    console.error(err);
-    document.getElementById("last-updated").textContent = "Error loading data";
+.top-bar-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+#last-updated {
+  color: #e5e7eb;
+}
+
+/* GREEN REFRESH BUTTON */
+#refresh-btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #16a34a; /* Green */
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+#refresh-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+/* MAIN CONTAINER */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px 40px;
+}
+
+/* SUMMARY CARDS (Option 2) */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #f3f4f6; /* Light gray */
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.card h2 {
+  font-size: 0.85rem;
+  color: #001F3F; /* Navy */
+  margin-bottom: 6px;
+}
+
+.card-number {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #B3001B; /* Crimson */
+}
+
+.card-issue {
+  border-left: 4px solid #B3001B;
+}
+
+/* CHARTS */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.chart-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.chart-card h3 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #001F3F;
+}
+
+/* TABLE PANELS */
+.flex-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.panel h3 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #001F3F;
+}
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+thead {
+  background: #e5e7eb;
+}
+
+th, td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+  text-align: left;
+  color: #111827;
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* GREEN RESOLVE BUTTON */
+.resolve-btn {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: none;
+  background: #16a34a; /* Green */
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.resolve-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 1100px) {
+  .cards {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+  .flex-row {
+    grid-template-columns: 1fr;
   }
 }
 
-function updateSummaryCards(data) {
-  document.getElementById("today-count").textContent = data.todayCount ?? 0;
-  document.getElementById("today-clear").textContent = data.todayClear ?? 0;
-  document.getElementById("today-issues").textContent = data.todayIssues ?? 0;
-  document.getElementById("open-issues").textContent = data.openIssueCount ?? 0;
-  document.getElementById("locations-covered").textContent = data.locationsCovered ?? 0;
-  document.getElementById("week-count").textContent = data.weekCount ?? 0;
-}
-
-function renderOpenIssues(openIssues) {
-  const tbody = document.getElementById("open-issues-body");
-  tbody.innerHTML = "";
-
-  (openIssues || []).forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatTime(r.timestamp)}</td>
-      <td>${r.location || ""}</td>
-      <td>${r.area || ""}</td>
-      <td>${r.issueText || ""}</td>
-      <td>${r.inspector || ""}</td>
-      <td><button class="resolve-btn" data-row="${r.sheetRow}">Resolve</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  tbody.querySelectorAll(".resolve-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const row = btn.getAttribute("data-row");
-      resolveIssue(row);
-    });
-  });
-}
-
-function renderRecentLog(recentLog) {
-  const tbody = document.getElementById("recent-log-body");
-  tbody.innerHTML = "";
-
-  (recentLog || []).forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatTime(r.timestamp)}</td>
-      <td>${r.location || ""}</td>
-      <td>${r.area || ""}</td>
-      <td>${r.status || ""}</td>
-      <td>${r.issueText || ""}</td>
-      <td>${r.inspector || ""}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderCharts(data) {
-  const hourly = data.hourly || [];
-  const daily = data.daily || [];
-
-  const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
-  const hourlyClear = hourly.map(h => h.clear || 0);
-  const hourlyIssue = hourly.map(h => h.issue || 0);
-
-  const dailyLabels = daily.map(d => d.date);
-  const dailyClear = daily.map(d => d.clear || 0);
-  const dailyIssue = daily.map(d => d.issue || 0);
-
-  const hourlyCtx = document.getElementById("hourlyChart").getContext("2d");
-  const dailyCtx = document.getElementById("dailyChart").getContext("2d");
-
-  if (hourlyChart) hourlyChart.destroy();
-  if (dailyChart) dailyChart.destroy();
-
-  hourlyChart = new Chart(hourlyCtx, {
-    type: "bar",
-    data: {
-      labels: hourlyLabels,
-      datasets: [
-        {
-          label: "Clear",
-          data: hourlyClear,
-          backgroundColor: "rgba(34,197,94,0.7)"
-        },
-        {
-          label: "Issues",
-          data: hourlyIssue,
-          backgroundColor: "rgba(239,68,68,0.7)"
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: "#e5e7eb" } } },
-      scales: {
-        x: { ticks: { color: "#9ca3af" }, grid: { color: "#1f2937" } },
-        y: { ticks: { color: "#9ca3af" }, grid: { color: "#1f2937" } }
-      }
-    }
-  });
-
-  dailyChart = new Chart(dailyCtx, {
-    type: "bar",
-    data: {
-      labels: dailyLabels,
-      datasets: [
-        {
-          label: "Clear",
-          data: dailyClear,
-          backgroundColor: "rgba(34,197,94,0.7)"
-        },
-        {
-          label: "Issues",
-          data: dailyIssue,
-          backgroundColor: "rgba(239,68,68,0.7)"
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: "#e5e7eb" } } },
-      scales: {
-        x: { ticks: { color: "#9ca3af" }, grid: { color: "#1f2937" } },
-        y: { ticks: { color: "#9ca3af" }, grid: { color: "#1f2937" } }
-      }
-    }
-  });
-}
-
-function formatTime(ts) {
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("en-US", {
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-async function resolveIssue(sheetRow) {
-  if (!sheetRow) return;
-  const confirmed = confirm(`Mark issue on row ${sheetRow} as resolved?`);
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "resolve", sheetRow: Number(sheetRow) })
-    });
-    const result = await res.json();
-    if (result && result.success) {
-      alert("Issue marked resolved.");
-      fetchData();
-    } else {
-      alert("Resolve failed: " + JSON.stringify(result));
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Error resolving issue.");
+@media (max-width: 700px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 }
-
-document.getElementById("refresh-btn").addEventListener("click", fetchData);
-setInterval(fetchData, 60000);
-fetchData();
