@@ -47,10 +47,7 @@ function renderOpenIssues(list) {
   });
 
   tbody.querySelectorAll(".resolve-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const row = btn.getAttribute("data-row");
-      resolveIssue(row);
-    });
+    btn.addEventListener("click", () => resolveIssue(btn.dataset.row));
   });
 }
 
@@ -92,33 +89,9 @@ function renderCharts(d) {
     data: {
       labels: hourlyLabels,
       datasets: [
-        {
-          label: "Clear",
-          data: hourlyClear,
-          backgroundColor: "rgba(22, 163, 74, 0.7)" // green
-        },
-        {
-          label: "Issues",
-          data: hourlyIssue,
-          backgroundColor: "rgba(239, 68, 68, 0.7)" // red
-        }
+        { label: "Clear", data: hourlyClear, backgroundColor: "rgba(22,163,74,0.7)" },
+        { label: "Issues", data: hourlyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
       ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { labels: { color: "#111827" } }
-      },
-      scales: {
-        x: {
-          ticks: { color: "#4b5563" },
-          grid: { color: "#e5e7eb" }
-        },
-        y: {
-          ticks: { color: "#4b5563" },
-          grid: { color: "#e5e7eb" }
-        }
-      }
     }
   });
 
@@ -127,33 +100,9 @@ function renderCharts(d) {
     data: {
       labels: dailyLabels,
       datasets: [
-        {
-          label: "Clear",
-          data: dailyClear,
-          backgroundColor: "rgba(22, 163, 74, 0.7)" // green
-        },
-        {
-          label: "Issues",
-          data: dailyIssue,
-          backgroundColor: "rgba(239, 68, 68, 0.7)" // red
-        }
+        { label: "Clear", data: dailyClear, backgroundColor: "rgba(22,163,74,0.7)" },
+        { label: "Issues", data: dailyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
       ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { labels: { color: "#111827" } }
-      },
-      scales: {
-        x: {
-          ticks: { color: "#4b5563" },
-          grid: { color: "#e5e7eb" }
-        },
-        y: {
-          ticks: { color: "#4b5563" },
-          grid: { color: "#e5e7eb" }
-        }
-      }
     }
   });
 }
@@ -169,23 +118,19 @@ function formatTime(ts) {
   });
 }
 
-async function resolveIssue(sheetRow) {
-  if (!sheetRow) return;
-  const confirmed = confirm(`Mark issue on row ${sheetRow} as resolved?`);
-  if (!confirmed) return;
+async function resolveIssue(row) {
+  if (!row) return;
+  if (!confirm(`Mark issue on row ${row} as resolved?`)) return;
 
   try {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "resolve", sheetRow: Number(sheetRow) })
+      body: JSON.stringify({ action: "resolve", sheetRow: Number(row) })
     });
+
     const result = await res.json();
-    if (result && result.success) {
-      fetchData();
-    } else {
-      alert("Resolve failed");
-    }
+    if (result.success) fetchData();
   } catch (err) {
     console.error(err);
     alert("Error resolving issue");
