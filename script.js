@@ -1,188 +1,197 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
+const API_URL = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
 
-body {
-  background: #0f172a;
-  color: #e5e7eb;
-}
+let hourlyChart, dailyChart;
 
-/* Header */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background: #020617;
-  border-bottom: 1px solid #1f2937;
-}
+async function fetchData() {
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
-.top-bar h1 {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
+    document.getElementById("last-updated").textContent =
+      "Last updated: " + new Date().toLocaleString();
 
-.top-bar-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  font-size: 0.9rem;
-  color: #9ca3af;
-}
-
-#refresh-btn {
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: 1px solid #4b5563;
-  background: #111827;
-  color: #e5e7eb;
-  cursor: pointer;
-}
-
-#refresh-btn:hover {
-  background: #1f2937;
-}
-
-.container {
-  padding: 16px 24px 32px;
-}
-
-/* Cards */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(120px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.card {
-  background: #020617;
-  border-radius: 8px;
-  padding: 10px 12px;
-  border: 1px solid #1f2937;
-}
-
-.card h2 {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin-bottom: 4px;
-}
-
-.card-number {
-  font-size: 1.4rem;
-  font-weight: 600;
-}
-
-.card-issue {
-  border-color: #b91c1c;
-}
-
-/* Charts row */
-.charts-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.chart-card {
-  background: #020617;
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #1f2937;
-}
-
-.chart-card h3 {
-  font-size: 0.95rem;
-  margin-bottom: 8px;
-}
-
-/* Bottom row: tables */
-.flex-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1.4fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.panel {
-  background: #020617;
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #1f2937;
-}
-
-.panel h3 {
-  font-size: 0.95rem;
-  margin-bottom: 8px;
-}
-
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-thead {
-  background: #111827;
-}
-
-th, td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #1f2937;
-}
-
-th {
-  text-align: left;
-  color: #9ca3af;
-}
-
-tbody tr:nth-child(even) {
-  background: #020617;
-}
-
-tbody tr:nth-child(odd) {
-  background: #020617;
-}
-
-tbody tr:hover {
-  background: #111827;
-}
-
-/* Resolve button */
-.resolve-btn {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid #16a34a;
-  background: #022c22;
-  color: #bbf7d0;
-  cursor: pointer;
-}
-
-.resolve-btn:hover {
-  background: #065f46;
-}
-
-/* Responsive */
-@media (max-width: 1100px) {
-  .cards {
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
-  }
-  .charts-row {
-    grid-template-columns: 1fr;
-  }
-  .flex-row {
-    grid-template-columns: 1fr;
+    updateSummaryCards(data);
+    renderOpenIssues(data.openIssues || []);
+    renderRecentLog(data.recentLog || []);
+    renderCharts(data);
+  } catch (err) {
+    console.error(err);
+    document.getElementById("last-updated").textContent = "Error loading data";
   }
 }
 
-@media (max-width: 700px) {
-  .cards {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+function updateSummaryCards(d) {
+  document.getElementById("today-count").textContent = d.todayCount ?? 0;
+  document.getElementById("today-clear").textContent = d.todayClear ?? 0;
+  document.getElementById("today-issues").textContent = d.todayIssues ?? 0;
+  document.getElementById("open-issues").textContent = d.openIssueCount ?? 0;
+  document.getElementById("locations-covered").textContent = d.locationsCovered ?? 0;
+  document.getElementById("week-count").textContent = d.weekCount ?? 0;
+}
+
+function renderOpenIssues(list) {
+  const tbody = document.getElementById("open-issues-body");
+  tbody.innerHTML = "";
+
+  list.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatTime(r.timestamp)}</td>
+      <td>${r.location || ""}</td>
+      <td>${r.area || ""}</td>
+      <td>${r.issueText || ""}</td>
+      <td>${r.inspector || ""}</td>
+      <td><button class="resolve-btn" data-row="${r.sheetRow}">Resolve</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll(".resolve-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const row = btn.getAttribute("data-row");
+      resolveIssue(row);
+    });
+  });
+}
+
+function renderRecentLog(list) {
+  const tbody = document.getElementById("recent-log-body");
+  tbody.innerHTML = "";
+
+  list.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatTime(r.timestamp)}</td>
+      <td>${r.location || ""}</td>
+      <td>${r.area || ""}</td>
+      <td>${r.status || ""}</td>
+      <td>${r.issueText || ""}</td>
+      <td>${r.inspector || ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderCharts(d) {
+  const hourly = d.hourly || [];
+  const daily = d.daily || [];
+
+  const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+  const hourlyClear = hourly.map(h => h.clear || 0);
+  const hourlyIssue = hourly.map(h => h.issue || 0);
+
+  const dailyLabels = daily.map(x => x.date);
+  const dailyClear = daily.map(x => x.clear || 0);
+  const dailyIssue = daily.map(x => x.issue || 0);
+
+  if (hourlyChart) hourlyChart.destroy();
+  if (dailyChart) dailyChart.destroy();
+
+  hourlyChart = new Chart(document.getElementById("hourlyChart"), {
+    type: "bar",
+    data: {
+      labels: hourlyLabels,
+      datasets: [
+        {
+          label: "Clear",
+          data: hourlyClear,
+          backgroundColor: "rgba(22, 163, 74, 0.7)" // green
+        },
+        {
+          label: "Issues",
+          data: hourlyIssue,
+          backgroundColor: "rgba(239, 68, 68, 0.7)" // red
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: "#111827" } }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#4b5563" },
+          grid: { color: "#e5e7eb" }
+        },
+        y: {
+          ticks: { color: "#4b5563" },
+          grid: { color: "#e5e7eb" }
+        }
+      }
+    }
+  });
+
+  dailyChart = new Chart(document.getElementById("dailyChart"), {
+    type: "bar",
+    data: {
+      labels: dailyLabels,
+      datasets: [
+        {
+          label: "Clear",
+          data: dailyClear,
+          backgroundColor: "rgba(22, 163, 74, 0.7)" // green
+        },
+        {
+          label: "Issues",
+          data: dailyIssue,
+          backgroundColor: "rgba(239, 68, 68, 0.7)" // red
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: "#111827" } }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#4b5563" },
+          grid: { color: "#e5e7eb" }
+        },
+        y: {
+          ticks: { color: "#4b5563" },
+          grid: { color: "#e5e7eb" }
+        }
+      }
+    }
+  });
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+async function resolveIssue(sheetRow) {
+  if (!sheetRow) return;
+  const confirmed = confirm(`Mark issue on row ${sheetRow} as resolved?`);
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "resolve", sheetRow: Number(sheetRow) })
+    });
+    const result = await res.json();
+    if (result && result.success) {
+      fetchData();
+    } else {
+      alert("Resolve failed");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error resolving issue");
   }
 }
+
+document.getElementById("refresh-btn").addEventListener("click", fetchData);
+setInterval(fetchData, 60000);
+fetchData();
