@@ -237,10 +237,10 @@ async function fetchData() {
       });
 
   } catch (err) {
-    console.error(err);
-    document.getElementById("foot").textContent =
-      "⚠ Could not
-      <script>
+  console.error(err);
+  document.getElementById("foot").textContent =
+    "⚠ Could not reach endpoint. (" + err.message + ")";
+}
 // YOUR APPS SCRIPT WEB APP URL
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
 
