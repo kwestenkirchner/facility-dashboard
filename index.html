@@ -1,693 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Facility Inspection Dashboard - St. Francis de Sales</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --navy: #1a3a5c;
-  --red: #b91c1c;
-  --red-bg: #fee2e2;
-  --green: #15803d;
-  --green-bg: #dcfce7;
-  --amber: #b45309;
-  --amber-bg: #fef3c7;
-  --gray: #6b7280;
-  --gray-bg: #f3f4f6;
-  --border: #e5e7eb;
-  --white: #ffffff;
-  --text: #111827;
-  --shadow: 0 1px 4px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.04);
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f0f4f8;
-  color: var(--text);
-  min-height: 100vh;
-  font-size: 14px;
-}
-
-/* HEADER */
-header {
-  background: var(--navy);
-  color: white;
-  position: sticky;
-  top: 0;
-  z-index: 200;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
-}
-.hbar { background: var(--red); height: 5px; }
-.hinner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.htitle h1 { font-size: 1.05rem; font-weight: 700; }
-.htitle p { font-size: 0.72rem; opacity: 0.6; margin-top: 2px; }
-.hright { display: flex; align-items: center; gap: 12px; }
-.live-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4ade80;
-  animation: blink 1.8s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.clock { font-size: 0.8rem; font-variant-numeric: tabular-nums; opacity: 0.8; }
-.rbtn {
-  background: var(--red);
-  border: none;
-  color: white;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.rbtn:hover { background: #991b1b; }
-.rbtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-main { max-width: 1300px; margin: 0 auto; padding: 20px 20px 48px; }
-
-/* STATS */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.stat {
-  background: var(--white);
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: var(--shadow);
-  border-top: 3px solid var(--border);
-}
-.stat.sn { border-top-color: var(--navy); }
-.stat.sg { border-top-color: var(--green); }
-.stat.sr { border-top-color: var(--red); }
-.stat.sa { border-top-color: var(--amber); }
-.slabel {
-  font-size: 0.67rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gray);
-}
-.sval {
-  font-size: 2rem;
-  font-weight: 800;
-  margin: 6px 0 2px;
-  font-variant-numeric: tabular-nums;
-  color: var(--navy);
-}
-.stat.sg .sval { color: var(--green); }
-.stat.sr .sval { color: var(--red); }
-.stat.sa .sval { color: var(--amber); }
-.ssub { font-size: 0.7rem; color: var(--gray); }
-
-/* SECTION TITLE */
-.stitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--navy);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.stitle::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>Facilities Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
-<header>
-  <div class="hbar"></div>
-  <div class="hinner">
-    <div class="htitle">
-      <h1>St. Francis de Sales - Facility Inspection Dashboard</h1>
-      <p>St. Francis de Sales High School · Restroom & Locker Room Monitoring</p>
+  <header class="top-bar">
+    <h1>Facilities Daily Dashboard</h1>
+    <div class="top-bar-right">
+      <span id="last-updated">Last updated: --</span>
+      <button id="refresh-btn">Refresh</button>
     </div>
-    <div class="hright">
-      <div class="live-pill"><span class="live-dot"></span>LIVE</div>
-      <span class="clock" id="clock">--:-- --</span>
-      <button class="rbtn" id="rbtn" onclick="fetchData()">↻ Refresh</button>
-    </div>
-  </div>
-</header>
-
-<div id="toast"></div>
-
-<main>
-
-  <!-- TOP STATS -->
-  <div class="stats">
-<script>
-// YOUR APPS SCRIPT WEB APP URL
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec
-";
-
-const REFRESH_MS = 120000;
-
-const LOCATIONS = [
-  "3rd Floor Restroom",
-  "2nd Floor Restroom",
-  "Cafeteria Mens Restroom",
-  "Cafeteria Womens Restroom",
-  "West Lobby Mens Restroom",
-  "West Lobby Womens Restroom",
-  "Auxiliary Locker Room 1 - North",
-  "Auxiliary Locker Room 2 - South",
-  "7th and 8th Grade Locker Room",
-  "Swim Locker Room",
-];
-
-const INSPECTORS = [
-  "Ken Westenkirchner","Matt Prater","Corey Driver",
-  "Murell Gregory","Khyle Weirich","Paris Martin","Michael Hagmeyer"
-];
-
-let DATA = null, chH, chL, chW;
-
-// CLOCK
-setInterval(() => {
-  document.getElementById("clock").textContent =
-    new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-}, 1000);
-
-// TOAST
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 3000);
-}
-
-// FETCH DATA
-async function fetchData() {
-  const btn = document.getElementById("rbtn");
-  btn.disabled = true;
-  btn.textContent = "Loading ...";
-
-  try {
-    const res = await fetch(ENDPOINT);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    DATA = await res.json();
-    if (DATA.error) throw new Error(DATA.error);
-
-    renderAll();
-
-    document.getElementById("foot").textContent =
-      "Live data · Last refreshed: " +
-      new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-
-  } catch (err) {
-  console.error(err);
-  document.getElementById("foot").textContent =
-    "⚠ Could not reach endpoint. (" + err.message + ")";
-}
-// YOUR APPS SCRIPT WEB APP URL
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
-
-const REFRESH_MS = 120000;
-
-const LOCATIONS = [
-  "3rd Floor Restroom",
-  "2nd Floor Restroom",
-  "Cafeteria Mens Restroom",
-  "Cafeteria Womens Restroom",
-  "West Lobby Mens Restroom",
-  "West Lobby Womens Restroom",
-  "Auxiliary Locker Room 1 - North",
-  "Auxiliary Locker Room 2 - South",
-  "7th and 8th Grade Locker Room",
-  "Swim Locker Room",
-];
-
-const INSPECTORS = [
-  "Ken Westenkirchner","Matt Prater","Corey Driver",
-  "Murell Gregory","Khyle Weirich","Paris Martin","Michael Hagmeyer"
-];
-
-let DATA = null, chH, chL, chW;
-
-// CLOCK
-setInterval(() => {
-  document.getElementById("clock").textContent =
-    new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-}, 1000);
-
-// TOAST
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 3000);
-}
-
-// FETCH DATA
-async function fetchData() {
-  const btn = document.getElementById("rbtn");
-  btn.disabled = true;
-  btn.textContent = "Loading ...";
-
-  try {
-    const res = await fetch(ENDPOINT);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    DATA = await res.json();
-    if (DATA.error) throw new Error(DATA.error);
-
-    renderAll();
-
-    document.getElementById("foot").textContent =
-      "Live data · Last refreshed: " +
-      new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-
-  } catch (err) {
-    console.error(err);
-    document.getElementById("foot").textContent =
-      "⚠ Could not reach endpoint. (" + err.message + ")";
-  }
-
-  btn.disabled = false;
-  btn.textContent = "↻ Refresh";
-}
-
-// RESOLVE ISSUE
-async function resolveIssue(sheetRow, btnEl) {
-  btnEl.disabled = true;
-  btnEl.textContent = "Resolving...";
-
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "resolve", sheetRow }),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      showToast("✔ Issue marked as resolved!");
-      await fetchData(); // refresh dashboard
-    } else {
-      showToast("⚠ Could not resolve: " + (data.error || "unknown error"));
-      btnEl.disabled = false;
-      btnEl.textContent = "Resolve";
-    }
-
-  } catch (err) {
-    showToast("⚠ Network error: " + err.message);
-    btnEl.disabled = false;
-    btnEl.textContent = "Resolve";
-  }
-}
-
-// RENDER ALL
-function renderAll() {
-  setText("s1", DATA.todayCount);
-  setText("s2", DATA.todayClear);
-  setText("s3", DATA.todayIssues);
-  setText("s4", DATA.openIssueCount);
-  setText("s5", DATA.locationsCovered + "/10");
-  setText("s6", DATA.weekCount);
-
-  renderLocGrid();
-  renderOpenIssues();
-  renderInspectors();
-  renderCharts();
-  populateFilters();
-  renderTable();
-}
-
-// LOCATION GRID
-function renderLocGrid() {
-  const grid = document.getElementById("loc-grid");
-
-  grid.innerHTML = LOCATIONS.map(loc => {
-    const last = DATA.locationStatus[loc];
-    let cls, badge;
-
-    if (!last) {
-      cls = "ll";
-      badge = `<span class="lbadge bgx">Not Checked</span>`;
-    } else if (last.hasIssue) {
-      cls = "lr";
-      badge = `<span class="lbadge bgr">Issue Reported</span>`;
-    } else {
-      cls = "lg";
-      badge = `<span class="lbadge bgg">All Clear</span>`;
-    }
-
-    const meta = last
-      ? `<span>${last.time}</span><span>${last.inspector}</span>`
-      : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
-
-    return `
-      <div class="lcard ${cls}">
-        <div class="lname">${loc}</div>
-        ${badge}
-        <div class="lmeta">${meta}</div>
-      </div>`;
-  }).join("");
-}
-
-// OPEN ISSUES LIST
-function renderOpenIssues() {
-  const el = document.getElementById("open-issues");
-  const items = DATA.openIssues || [];
-
-  if (!items.length) {
-    el.innerHTML = `<div class="none">✔ No open issues in the last 48 hours!</div>`;
-    return;
-  }
-
-  el.innerHTML = items.map(r => {
-    const issueText = (r.issues || [])
-      .filter(i => i !== "No Issues Found")
-      .join(", ");
-
-    const isResolved = r.resolved;
-
-    const photoLinks = (r.photos || [])
-      .map((url, i) =>
-        `<a class="photo-link" href="${url}" target="_blank">Photo ${i + 1}</a>`
-      )
-      .join(" ");
-
-    const actionHtml = isResolved
-      ? `<span class="resolved-tag">Resolved</span>`
-      : `<button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">Resolve</button>`;
-
-    const resolvedMeta =
-      isResolved && (r.resolvedBy || r.resolvedTime)
-        ? `<div class="imeta" style="color:var(--green);margin-top:4px;">
-             Resolved by ${r.resolvedBy || "N/A"} · ${r.resolvedTime || ""}
-           </div>`
-        : "";
-
-    return `
-      <li class="iitem${isResolved ? " resolved" : ""}">
-        <span class="idot${isResolved ? " resolved-dot" : ""}"></span>
-        <div style="flex:1;min-width:0;">
-          <div class="iloc">${r.location}</div>
-          <div class="itype">${issueText}</div>
-          <div class="imeta">Reported by ${r.inspector} · ${timeAgo(new Date(r.timestamp))}</div>
-          ${resolvedMeta}
-          ${photoLinks ? `<div style="margin-top:4px;">${photoLinks}</div>` : ""}
-        </div>
-        <div class="iactions">
-          ${actionHtml}
-          <span class="itime">${r.time}</span>
-        </div>
-      </li>`;
-  }).join("");
-}
-
-// INSPECTOR ACTIVITY
-function renderInspectors() {
-  const el = document.getElementById("insp-grid");
-  const c = DATA.inspectorCounts || {};
-  const max = Math.max(...INSPECTORS.map(n => c[n] || 0), 1);
-
-  el.innerHTML = INSPECTORS.map(name => {
-    const n = c[name] || 0;
-    const pct = Math.round((n / max) * 100);
-    const parts = name.split(" ");
-    const s = parts[0] + " " + parts[parts.length - 1];
-
-    return `
-      <div class="icard" style="${n === 0 ? "opacity:0.5" : ""}">
-        <div class="iname">${s}</div>
-        <div class="inum">${n}</div>
-        <div class="isub">${n === 1 ? "check" : "checks"} today</div>
-        <div class="ibar-w">
-          <div class="ibar" style="width:${pct}%;background:${n ? "var(--navy)" : "var(--border)"}"></div>
-        </div>
-      </div>`;
-  }).join("");
-}
-
-// CHARTS
-function renderCharts() {
-  const hourly = DATA.hourly || [];
-
-  const hl = Array.from({ length: 13 }, (_, i) => {
-    const h = i + 6;
-    if (h < 12) return `${h}am`;
-    if (h === 12) return "12pm";
-    return `${h - 12}pm`;
-  });
-
-  if (chH) chH.destroy();
-  chH = new Chart(document.getElementById("ch-hour"), {
-    type: "bar",
-    data: {
-      labels: hl,
-      datasets: [
-        {
-          label: "All Clear",
-          data: hl.map((_, i) => (hourly[i + 6] || {}).clear || 0),
-          backgroundColor: "#86efac",
-          borderRadius: 3,
-        },
-        {
-          label: "Issue",
-          data: hl.map((_, i) => (hourly[i + 6] || {}).issue || 0),
-          backgroundColor: "#fca5a5",
-          borderRadius: 3,
-        },
-      ],
-    },
-    options: chartOpts({ stacked: true }),
-  });
-
-  const bl = DATA.byLocation || {};
-  const lv = LOCATIONS.map(l => bl[l] || 0);
-  const ls = LOCATIONS.map(l =>
-    l.replace(" Restroom", "").replace(" Locker Room", "").replace("Auxiliary", "Aux.")
-  );
-
-  if (chL) chL.destroy();
-  chL = new Chart(document.getElementById("ch-loc"), {
-    type: "bar",
-    data: {
-      labels: ls,
-      datasets: [
-        {
-          label: "Issues",
-          data: lv,
-          backgroundColor: lv.map(v =>
-            v >= 5 ? "#fca5a5" : v >= 2 ? "#fde68a" : "#86efac"
-          ),
-          borderRadius: 3,
-        },
-      ],
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: "#f3f4f6" }, ticks: { font: { size: 10 } } },
-        y: { grid: { display: false }, ticks: { font: { size: 10 } } },
-      },
-    },
-  });
-
-  const daily = DATA.daily || [];
-  if (chW) chW.destroy();
-  chW = new Chart(document.getElementById("ch-week"), {
-    type: "bar",
-    data: {
-      labels: daily.map(d => d.date),
-      datasets: [
-        {
-          label: "All Clear",
-          data: daily.map(d => d.clear),
-          backgroundColor: "#86efac",
-          borderRadius: 3,
-          stack: "s",
-        },
-        {
-          label: "Issues",
-          data: daily.map(d => d.issue),
-          backgroundColor: "#fca5a5",
-          borderRadius: 3,
-          stack: "s",
-        },
-      ],
-    },
-    options: chartOpts({ stacked: true }),
-  });
-}
-
-function chartOpts({ stacked = false } = {}) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom",
-        labels: { font: { size: 11 }, boxWidth: 12, padding: 10 },
-      },
-    },
-    scales: {
-      x: {
-        stacked,
-        grid: { display: false },
-        ticks: { font: { size: 10 } },
-      },
-      y: {
-        stacked,
-        grid: { color: "#f3f4f6" },
-        ticks: { font: { size: 10 }, stepSize: 1 },
-      },
-    },
-  };
-}
-
-// FILTERS
-function populateFilters() {
-  const rows = DATA.recentLog || [];
-  const locs = [...new Set(rows.map(r => r.location))].sort();
-  const whos = [...new Set(rows.map(r => r.inspector))].sort();
-
-  const fl = document.getElementById("fl");
-  const fw = document.getElementById("fw");
-
-  const cl = fl.value;
-  const cw = fw.value;
-
-  fl.innerHTML =
-    `<option value="">All Locations</option>` +
-    locs.map(l => `<option ${l === cl ? "selected" : ""}>${l}</option>`).join("");
-
-  fw.innerHTML =
-    `<option value="">All Inspectors</option>` +
-    whos.map(w => `<option ${w === cw ? "selected" : ""}>${w}</option>`).join("");
-}
-
-// TABLE
-function renderTable() {
-  const loc = document.getElementById("fl").value;
-  const stat = document.getElementById("fs").value;
-  const who = document.getElementById("fw").value;
-
-  let rows = (DATA && DATA.recentLog) ? [...DATA.recentLog] : [];
-
-  if (loc) rows = rows.filter(r => r.location === loc);
-  if (stat === "clear") rows = rows.filter(r => !r.hasIssue);
-  if (stat === "issue") rows = rows.filter(r => r.hasIssue);
-  if (who) rows = rows.filter(r => r.inspector === who);
-
-  rows = rows.slice(0, 60);
-
-  const tb = document.getElementById("tbody");
-
-  if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="7" class="loading">No records match.</td></tr>`;
-    return;
-  }
-
-  tb.innerHTML = rows.map(r => {
-    const badge = r.hasIssue
-      ? `<span class="badge bg-red">Issues</span>`
-      : `<span class="badge bg-green">Clear</span>`;
-
-    const iss = r.hasIssue
-      ? (r.issues || []).filter(i => i !== "No Issues Found").join(", ")
-      : "-";
-
-    const photoHtml =
-      r.photos && r.photos.length > 0
-        ? r.photos
-            .map(
-              (url, i) =>
-                `<a href="${url}" target="_blank" style="color:var(--navy);font-weight:600;font-size:0.72rem;margin-right:6px;">P${i + 1}</a>`
-            )
-            .join("")
-        : `<span style="color:var(--gray)">-</span>`;
-
-    return `
-      <tr>
-        <td>${r.date}</td>
-        <td style="font-variant-numeric:tabular-nums">${r.time}</td>
-        <td style="font-weight:600">${r.location}</td>
-        <td>${r.inspector}</td>
-        <td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;color:${
-          r.hasIssue ? "var(--red)" : "var(--gray)"
-        }">${iss}</td>
-        <td>${badge}</td>
-        <td>${photoHtml}</td>
-      </tr>`;
-  }).join("");
-}
-
-// HELPERS
-function setText(id, v) {
-  const e = document.getElementById(id);
-  if (e) e.textContent = v;
-}
-    </body>
+  </header>
+
+  <main class="container">
+    <!-- Summary cards -->
+    <section class="cards">
+      <div class="card">
+        <h2>Today Total</h2>
+        <p id="today-count" class="card-number">--</p>
+      </div>
+      <div class="card">
+        <h2>Today Clear</h2>
+        <p id="today-clear" class="card-number">--</p>
+      </div>
+      <div class="card card-issue">
+        <h2>Today Issues</h2>
+        <p id="today-issues" class="card-number">--</p>
+      </div>
+      <div class="card">
+        <h2>Open Issues (48h)</h2>
+        <p id="open-issues" class="card-number">--</p>
+      </div>
+      <div class="card">
+        <h2>Locations Covered Today</h2>
+        <p id="locations-covered" class="card-number">--</p>
+      </div>
+      <div class="card">
+        <h2>Checks This Week</h2>
+        <p id="week-count" class="card-number">--</p>
+      </div>
+    </section>
+
+    <!-- Charts row -->
+    <section class="charts-row">
+      <div class="chart-card">
+        <h3>Hourly Activity (All Time)</h3>
+        <canvas id="hourlyChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Last 14 Days</h3>
+        <canvas id="dailyChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Issues by Location</h3>
+        <canvas id="locationChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Location status + inspector counts -->
+    <section class="flex-row">
+      <div class="panel">
+        <h3>Latest Status by Location</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Inspector</th>
+              <th>Status</th>
+              <th>Issue</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="location-status-body">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h3>Today by Inspector</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Inspector</th>
+              <th>Checks</th>
+            </tr>
+          </thead>
+          <tbody id="inspector-counts-body">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Open issues + recent log -->
+    <section class="flex-row">
+      <div class="panel">
+        <h3>Open Issues (Last 48 Hours)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Location</th>
+              <th>Area</th>
+              <th>Issue</th>
+              <th>Inspector</th>
+              <th>Resolve</th>
+            </tr>
+          </thead>
+          <tbody id="open-issues-body">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h3>Recent Activity</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Location</th>
+              <th>Area</th>
+              <th>Status</th>
+              <th>Issue</th>
+              <th>Inspector</th>
+            </tr>
+          </thead>
+          <tbody id="recent-log-body">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
 </html>
-
-
-function timeAgo(dt) {
-  const m = Math.floor((Date.now() - dt) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-// INITIAL LOAD + AUTO REFRESH
-fetchData();
-setInterval(fetchData, REFRESH_MS);
-</script>
