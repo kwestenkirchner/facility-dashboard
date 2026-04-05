@@ -1,6 +1,12 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
 
 let hourlyChart, dailyChart;
+let photoTooltip, photoTooltipImg;
+
+function initTooltip() {
+  photoTooltip = document.getElementById("photo-tooltip");
+  photoTooltipImg = document.getElementById("photo-tooltip-img");
+}
 
 async function fetchData() {
   try {
@@ -35,19 +41,27 @@ function renderOpenIssues(list) {
 
   list.forEach(r => {
     const tr = document.createElement("tr");
+    const photosHtml = buildPhotosHtml(r.photos || []);
+
     tr.innerHTML = `
       <td>${formatTime(r.timestamp)}</td>
       <td>${r.location || ""}</td>
-      <td>${r.area || ""}</td>
       <td>${r.issueText || ""}</td>
+      <td>${r.notes || ""}</td>
       <td>${r.inspector || ""}</td>
-      <td><button class="resolve-btn" data-row="${r.sheetRow}">Resolve</button></td>
+      <td>${photosHtml}</td>
+      <td><button class="resolve-btn" data-row="${r.sheetRow}" data-inspector="${r.inspector || ""}">Resolve</button></td>
     `;
     tbody.appendChild(tr);
   });
 
+  attachPhotoHoverHandlers();
   tbody.querySelectorAll(".resolve-btn").forEach(btn => {
-    btn.addEventListener("click", () => resolveIssue(btn.dataset.row));
+    btn.addEventListener("click", () => {
+      const row = btn.getAttribute("data-row");
+      const inspector = btn.getAttribute("data-inspector");
+      resolveIssue(row, inspector);
+    });
   });
 }
 
@@ -57,16 +71,21 @@ function renderRecentLog(list) {
 
   list.forEach(r => {
     const tr = document.createElement("tr");
+    const photosHtml = buildPhotosHtml(r.photos || []);
+
     tr.innerHTML = `
       <td>${formatTime(r.timestamp)}</td>
       <td>${r.location || ""}</td>
-      <td>${r.area || ""}</td>
       <td>${r.status || ""}</td>
       <td>${r.issueText || ""}</td>
+      <td>${r.notes || ""}</td>
       <td>${r.inspector || ""}</td>
+      <td>${photosHtml}</td>
     `;
     tbody.appendChild(tr);
   });
+
+  attachPhotoHoverHandlers();
 }
 
 function renderCharts(d) {
@@ -92,6 +111,14 @@ function renderCharts(d) {
         { label: "Clear", data: hourlyClear, backgroundColor: "rgba(22,163,74,0.7)" },
         { label: "Issues", data: hourlyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
       ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: "#111827" } } },
+      scales: {
+        x: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } },
+        y: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } }
+      }
     }
   });
 
@@ -103,6 +130,14 @@ function renderCharts(d) {
         { label: "Clear", data: dailyClear, backgroundColor: "rgba(22,163,74,0.7)" },
         { label: "Issues", data: dailyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
       ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: "#111827" } } },
+      scales: {
+        x: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } },
+        y: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } }
+      }
     }
   });
 }
@@ -118,25 +153,86 @@ function formatTime(ts) {
   });
 }
 
-async function resolveIssue(row) {
-  if (!row) return;
-  if (!confirm(`Mark issue on row ${row} as resolved?`)) return;
+/***** PHOTOS (HOVER THUMBNAILS) *****/
+
+function buildPhotosHtml(photos) {
+  if (!photos || photos.length === 0) return "";
+  return photos
+    .map((url, idx) => {
+      const safeUrl = url.replace(/"/g, "&quot;");
+      const label = photos.length === 1 ? "Photo" : `Photo ${idx + 1}`;
+      return `<a href="${safeUrl}" target="_blank" class="photo-link" data-photo-url="${safeUrl}">${label}</a>`;
+    })
+    .join("");
+}
+
+function attachPhotoHoverHandlers() {
+  const links = document.querySelectorAll(".photo-link");
+  links.forEach(link => {
+    link.addEventListener("mouseenter", onPhotoMouseEnter);
+    link.addEventListener("mouseleave", onPhotoMouseLeave);
+    link.addEventListener("mousemove", onPhotoMouseMove);
+  });
+}
+
+function onPhotoMouseEnter(e) {
+  const url = e.currentTarget.getAttribute("data-photo-url");
+  if (!url) return;
+  photoTooltipImg.src = url;
+  photoTooltip.style.display = "block";
+  positionTooltip(e);
+}
+
+function onPhotoMouseLeave() {
+  photoTooltip.style.display = "none";
+  photoTooltipImg.src = "";
+}
+
+function onPhotoMouseMove(e) {
+  positionTooltip(e);
+}
+
+function positionTooltip(e) {
+  const offset = 16;
+  const x = e.clientX + offset;
+  const y = e.clientY + offset;
+  photoTooltip.style.left = x + "px";
+  photoTooltip.style.top = y + "px";
+}
+
+/***** RESOLVE *****/
+
+async function resolveIssue(sheetRow, inspector) {
+  if (!sheetRow) return;
+  const confirmed = confirm(`Mark issue on row ${sheetRow} as resolved?`);
+  if (!confirmed) return;
 
   try {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "resolve", sheetRow: Number(row) })
+      body: JSON.stringify({
+        action: "resolve",
+        sheetRow: Number(sheetRow),
+        resolvedBy: inspector || "Dashboard"
+      })
     });
-
     const result = await res.json();
-    if (result.success) fetchData();
+    if (result && result.success) {
+      fetchData(); // Open Issues will clear, sheet keeps history
+    } else {
+      alert("Resolve failed");
+    }
   } catch (err) {
     console.error(err);
     alert("Error resolving issue");
   }
 }
 
+/***** INIT *****/
+
 document.getElementById("refresh-btn").addEventListener("click", fetchData);
 setInterval(fetchData, 60000);
+
+initTooltip();
 fetchData();
