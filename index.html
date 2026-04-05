@@ -46,10 +46,11 @@
           <thead>
             <tr>
               <th style="width: 140px;">Time</th>
-              <th style="width: 120px;">Location</th>
-              <th style="width: 120px;">Area</th>
+              <th style="width: 140px;">Location / Area</th>
               <th style="width: 200px;">Issue</th>
+              <th style="width: 200px;">Notes</th>
               <th style="width: 120px;">Inspector</th>
+              <th style="width: 120px;">Photos</th>
               <th style="width: 80px;">Resolve</th>
             </tr>
           </thead>
@@ -63,11 +64,12 @@
           <thead>
             <tr>
               <th style="width: 140px;">Time</th>
-              <th style="width: 120px;">Location</th>
-              <th style="width: 120px;">Area</th>
+              <th style="width: 140px;">Location / Area</th>
               <th style="width: 100px;">Status</th>
               <th style="width: 200px;">Issue</th>
+              <th style="width: 200px;">Notes</th>
               <th style="width: 120px;">Inspector</th>
+              <th style="width: 120px;">Photos</th>
             </tr>
           </thead>
           <tbody id="recent-log-body"></tbody>
@@ -75,6 +77,10 @@
       </div>
     </section>
   </main>
+
+  <div id="photo-tooltip" class="photo-tooltip" style="display:none;">
+    <img id="photo-tooltip-img" src="" alt="Photo preview" />
+  </div>
 
   <script src="script.js"></script>
 </body>
