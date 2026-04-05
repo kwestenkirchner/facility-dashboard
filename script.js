@@ -1,5 +1,5 @@
 // Use your deployed Web App URL here
-const API_URL = "https://script.google.com/macros/s/AKfycby5cMZBVEgfdivP-rGmnnfTNNo_U5aomjBQ1AeBTK9AoaxFMO6Fz33p8FdzpUDwJ_71/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby0uNWxJHcxNv5ODLEzI0lDWwNeaZ6sa-H-SdGup8AksZIFZN4MPTQu8yxGCwJsx2Zr/exec";
 let hourlyChart, dailyChart;
 let photoTooltip, photoTooltipImg;
 
