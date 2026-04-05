@@ -1,5 +1,5 @@
 // Use your deployed Web App URL here
-const API_URL = "https://script.google.com/macros/s/AKfycbwP8zK1M5m6sA7cnmpMxCobobpDnOOvZPL25OXsi2BmWj4OxZM3I9y0zNMVTLyA9hlk/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxBh1cTDGdZ0olQWDp1RsTqb0oB76Bp6k3DXtRysSWSYOrZuDJE5AE8_3W8_CyxTsk8jg/exec";
 
 let hourlyChart, dailyChart;
 let photoTooltip, photoTooltipImg;
@@ -36,6 +36,51 @@ function updateSummaryCards(d) {
   document.getElementById("week-count").textContent = d.weekCount ?? 0;
 }
 
+/***** SEVERITY LOGIC *****/
+
+function getSeverity(issueText) {
+  if (!issueText) return "low";
+  const text = issueText.toString().toLowerCase();
+
+  const highKeywords = ["leak", "hazard", "emergency", "unsafe", "exposed", "broken glass", "fire", "flood"];
+  const mediumKeywords = ["repair", "damaged", "not working", "issue", "problem", "loose"];
+
+  if (highKeywords.some(k => text.includes(k))) return "high";
+  if (mediumKeywords.some(k => text.includes(k))) return "medium";
+  return "low";
+}
+
+function buildStatusBadge(status, issueText) {
+  const isIssue = status === "Issue";
+  const severity = isIssue ? getSeverity(issueText) : "low";
+
+  if (!isIssue) {
+    return `<span class="status-badge status-clear">
+      <span class="status-icon">✔</span>
+      Clear
+    </span>`;
+  }
+
+  if (severity === "high") {
+    return `<span class="status-badge status-issue-high">
+      <span class="status-icon">⚠</span>
+      Issue (High)
+    </span>`;
+  } else if (severity === "medium") {
+    return `<span class="status-badge status-issue-medium">
+      <span class="status-icon">⚠</span>
+      Issue (Med)
+    </span>`;
+  } else {
+    return `<span class="status-badge status-issue-low">
+      <span class="status-icon">⚠</span>
+      Issue (Low)
+    </span>`;
+  }
+}
+
+/***** OPEN ISSUES TABLE *****/
+
 function renderOpenIssues(list) {
   const tbody = document.getElementById("open-issues-body");
   tbody.innerHTML = "";
@@ -43,6 +88,11 @@ function renderOpenIssues(list) {
   list.forEach(r => {
     const tr = document.createElement("tr");
     const photosHtml = buildPhotosHtml(r.photos || []);
+    const severity = getSeverity(r.issueText);
+    let rowClass = "issue-row-medium";
+    if (severity === "high") rowClass = "issue-row-high";
+    if (severity === "low") rowClass = "issue-row-low";
+    tr.className = rowClass;
 
     tr.innerHTML = `
       <td>${formatTime(r.timestamp)}</td>
@@ -66,6 +116,8 @@ function renderOpenIssues(list) {
   });
 }
 
+/***** RECENT ACTIVITY TABLE *****/
+
 function renderRecentLog(list) {
   const tbody = document.getElementById("recent-log-body");
   tbody.innerHTML = "";
@@ -73,11 +125,12 @@ function renderRecentLog(list) {
   list.forEach(r => {
     const tr = document.createElement("tr");
     const photosHtml = buildPhotosHtml(r.photos || []);
+    const statusBadge = buildStatusBadge(r.status, r.issueText);
 
     tr.innerHTML = `
       <td>${formatTime(r.timestamp)}</td>
       <td>${r.location || ""}</td>
-      <td>${r.status || ""}</td>
+      <td>${statusBadge}</td>
       <td>${r.issueText || ""}</td>
       <td>${r.notes || ""}</td>
       <td>${r.inspector || ""}</td>
@@ -88,6 +141,8 @@ function renderRecentLog(list) {
 
   attachPhotoHoverHandlers();
 }
+
+/***** CHARTS *****/
 
 function renderCharts(d) {
   const hourly = d.hourly || [];
@@ -142,6 +197,8 @@ function renderCharts(d) {
     }
   });
 }
+
+/***** UTILITIES *****/
 
 function formatTime(ts) {
   const d = new Date(ts);
