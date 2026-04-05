@@ -1,333 +1,444 @@
-// ⭐ USE YOUR NEW WEB APP URL HERE
-const API_URL = "https://script.google.com/macros/s/AKfycby0uNWxJHcxNv5ODLEzI0lDWwNeaZ6sa-H-SdGup8AksZIFZN4MPTQu8yxGCwJsx2Zr/exec";
+// ============================================================
+// ST. FRANCIS DE SALES HIGH SCHOOL
+// Facility Inspection System — Google Apps Script  v5
+//
+// CONTAINS:
+//   1. Form submit handler  (email alerts + logging)
+//   2. doGet() web endpoint (secure data feed for dashboard)
+//   3. doPost() endpoint    (resolve issues from dashboard)
+//   4. Trends updater
+// ============================================================
 
-let hourlyChart, dailyChart;
-let photoTooltip, photoTooltipImg;
+// ── CONFIG ───────────────────────────────────────────────────
+const CONFIG = {
+  MAINTENANCE_EMAIL: "kwestenkirchner@sfsknights.org",
+  SCHOOL_NAME:       "St. Francis de Sales High School",
+  RESPONSES_SHEET:   "Form Responses 1",
+  LOG_SHEET:         "Inspection Log",
+  TRENDS_SHEET:      "Trends & Analytics",
+  FROM_NAME:         "SFDS Facilities System",
+};
 
-function initTooltip() {
-  photoTooltip = document.getElementById("photo-tooltip");
-  photoTooltipImg = document.getElementById("photo-tooltip-img");
+// ── COLUMN POSITIONS in Form Responses sheet (0-indexed) ─────
+const COL = {
+  timestamp:  0,   // A — auto timestamp
+  accessCode: 1,   // B — Staff Access Code
+  inspector:  2,   // C — Your Name
+  location:   3,   // D — Location
+  issues:     4,   // E — Issues Found
+  notes:      5,   // F — Additional Notes
+  photos:     6,   // G — Photo upload
+};
+
+// ── PHOTO HELPER ─────────────────────────────────────────────
+// Handles photos stored as a JSON array of full URLs:
+// ["https://drive.google.com/uc?export=view&id=...","https://..."]
+function buildPhotoLinks(rawValue) {
+  if (!rawValue) return [];
+  const str = rawValue.toString().trim();
+  if (!str || str === "No photos") return [];
+
+  // JSON array of full URLs
+  if (str.startsWith("[")) {
+    try {
+      const arr = JSON.parse(str);
+      if (Array.isArray(arr)) return arr.map(u => u.toString().trim()).filter(Boolean);
+    } catch(e) {}
+  }
+
+  // Single full URL
+  if (str.startsWith("http")) return [str];
+
+  // Fallback: comma-separated file IDs
+  return str.split(",").map(s => s.trim()).filter(Boolean)
+            .map(id => `https://drive.google.com/file/d/${id}/view`);
 }
 
-async function fetchData() {
+// ────────────────────────────────────────────────────────────
+// 1. FORM SUBMIT TRIGGER
+// ────────────────────────────────────────────────────────────
+function onFormSubmit(e) {
   try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+    const ss        = SpreadsheetApp.getActiveSpreadsheet();
+    const response  = e.response;
+    const answers   = response.getItemResponses();
+    const timestamp = new Date();
 
-    document.getElementById("last-updated").textContent =
-      "Last updated: " + new Date().toLocaleString();
+    let parsed = {
+      timestamp, location: "", inspector: "",
+      issues: [], notes: "", photoUrls: [],
+    };
 
-    updateSummaryCards(data);
-    renderOpenIssues(data.openIssues || []);
-    renderRecentLog(data.recentLog || []);
-    renderCharts(data);
+    answers.forEach(item => {
+      const q = item.getItem().getTitle().toLowerCase();
+      const a = item.getResponse();
+      if (q.includes("location") || q.includes("restroom") || q.includes("locker"))
+        parsed.location = a;
+      else if (q.includes("your name") || q.includes("inspector"))
+        parsed.inspector = a;
+      else if (q.includes("issue") || q.includes("problem"))
+        parsed.issues = Array.isArray(a) ? a : (a ? [a] : []);
+      else if (q.includes("notes") || q.includes("describe") || q.includes("additional"))
+        parsed.notes = a || "";
+      else if (q.includes("photo") || q.includes("upload") || q.includes("image")) {
+        // Store as JSON array so buildPhotoLinks parses correctly on read-back
+        const raw = Array.isArray(a) ? JSON.stringify(a) : (a || "");
+        parsed.photoUrls = buildPhotoLinks(raw);
+      }
+    });
+
+    const hasIssues = parsed.issues.length > 0 &&
+                      !parsed.issues.every(i => i === "No Issues Found");
+
+    logToSheet(ss, parsed, hasIssues);
+    if (hasIssues) sendAlertEmail(parsed);
+    updateTrends(ss, parsed, hasIssues);
+
   } catch (err) {
-    console.error(err);
-    document.getElementById("last-updated").textContent = "Error loading data";
+    Logger.log("onFormSubmit ERROR: " + err.message);
+    MailApp.sendEmail({
+      to:      CONFIG.MAINTENANCE_EMAIL,
+      subject: "⚠️ Inspection System Error",
+      body:    "Error processing a form submission:\n\n" + err.message,
+    });
   }
 }
 
-function updateSummaryCards(d) {
-  document.getElementById("today-count").textContent = d.todayCount ?? 0;
-  document.getElementById("today-clear").textContent = d.todayClear ?? 0;
-  document.getElementById("today-issues").textContent = d.todayIssues ?? 0;
-  document.getElementById("open-issues").textContent = d.openIssueCount ?? 0;
-  document.getElementById("locations-covered").textContent = d.locationsCovered ?? 0;
-  document.getElementById("week-count").textContent = d.weekCount ?? 0;
+// ────────────────────────────────────────────────────────────
+// 2. SECURE WEB ENDPOINT — feeds data to the dashboard
+// ────────────────────────────────────────────────────────────
+function doGet(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.RESPONSES_SHEET);
+
+    if (!sheet) {
+      return jsonResponse({ error: "Sheet not found: " + CONFIG.RESPONSES_SHEET });
+    }
+
+    const data   = sheet.getDataRange().getValues();
+    const rows   = data.slice(1);
+    // Pass actual sheet row number (row 2 = first data row) so doPost can resolve by row
+    const parsed = rows
+      .map((row, i) => parseSheetRow(row, i + 2))
+      .filter(Boolean);
+
+    const today     = todayDateStr();
+    const todayRows = parsed.filter(r => r.date === today);
+
+    const locationStatus = {};
+    parsed.forEach(r => {
+      if (!locationStatus[r.location] ||
+          new Date(r.timestamp) > new Date(locationStatus[r.location].timestamp)) {
+        locationStatus[r.location] = r;
+      }
+    });
+
+    const inspectorCounts = {};
+    todayRows.forEach(r => {
+      inspectorCounts[r.inspector] = (inspectorCounts[r.inspector] || 0) + 1;
+    });
+
+    const cutoff     = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const openIssues = parsed
+      .filter(r => r.hasIssue && !r.resolved && new Date(r.timestamp) >= cutoff)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 20);
+
+    const recentLog = parsed.slice(0, 60);
+
+    const hourly = Array(24).fill(0).map(() => ({ clear: 0, issue: 0 }));
+    parsed.forEach(r => {
+      const h = new Date(r.timestamp).getHours();
+      if (r.hasIssue) hourly[h].issue++;
+      else            hourly[h].clear++;
+    });
+
+    const daily = [];
+    for (let d = 13; d >= 0; d--) {
+      const dt = new Date();
+      dt.setDate(dt.getDate() - d);
+      const ds = formatDate(dt);
+      const dr = parsed.filter(r => r.date === ds);
+      daily.push({
+        date:  dt.toLocaleDateString("en-US", { month: "numeric", day: "numeric" }),
+        clear: dr.filter(r => !r.hasIssue).length,
+        issue: dr.filter(r =>  r.hasIssue).length,
+      });
+    }
+
+    const byLocation = {};
+    parsed.forEach(r => {
+      if (!byLocation[r.location]) byLocation[r.location] = 0;
+      if (r.hasIssue) byLocation[r.location]++;
+    });
+
+    const payload = {
+      generated:        new Date().toISOString(),
+      todayCount:       todayRows.length,
+      todayClear:       todayRows.filter(r => !r.hasIssue).length,
+      todayIssues:      todayRows.filter(r =>  r.hasIssue).length,
+      openIssueCount:   openIssues.length,
+      locationsCovered: new Set(todayRows.map(r => r.location)).size,
+      weekCount:        parsed.filter(r => daysSince(new Date(r.timestamp)) < 7).length,
+      locationStatus,
+      inspectorCounts,
+      openIssues,
+      recentLog,
+      hourly,
+      daily,
+      byLocation,
+    };
+
+    return jsonResponse(payload);
+
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
 }
 
-/***** SEVERITY LOGIC *****/
+// ────────────────────────────────────────────────────────────
+// 3. doPost() — called by dashboard Resolve button
+//    Uses sheetRow (actual row number in Log sheet) to find
+//    the correct row — avoids timestamp format mismatch issues
+// ────────────────────────────────────────────────────────────
+function doPost(e) {
+  try {
+    const body     = JSON.parse(e.postData.contents);
+    const action   = body.action;
+    const sheetRow = parseInt(body.sheetRow); // actual row number in Log sheet
 
-function getSeverity(issueText) {
-  if (!issueText) return "low";
-  const text = issueText.toString().toLowerCase();
+    if (action === "resolve") {
+      const ss    = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(CONFIG.LOG_SHEET);
+      if (!sheet) return jsonResponse({ error: "Log sheet not found" });
+      if (!sheetRow || sheetRow < 2) return jsonResponse({ error: "Invalid row number" });
 
-  const highKeywords = ["leak", "hazard", "emergency", "unsafe", "exposed", "broken glass", "fire", "flood"];
-  const mediumKeywords = ["repair", "damaged", "not working", "issue", "problem", "loose"];
+      const now = Utilities.formatDate(
+        new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy h:mm a"
+      );
+      sheet.getRange(sheetRow, 11).setValue("✅ Resolved");
+      sheet.getRange(sheetRow, 12).setValue("Kurt W.");
+      sheet.getRange(sheetRow, 13).setValue(now);
+      sheet.getRange(sheetRow, 1, 1, 13).setBackground("#d4edda");
+      sheet.getRange(sheetRow, 11).setFontColor("#155724").setFontWeight("bold");
 
-  if (highKeywords.some(k => text.includes(k))) return "high";
-  if (mediumKeywords.some(k => text.includes(k))) return "medium";
-  return "low";
+      return jsonResponse({ success: true });
+    }
+
+    return jsonResponse({ error: "Unknown action" });
+
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
 }
 
-function buildStatusBadge(status, issueText) {
-  const isIssue = status === "Issue";
-  const severity = isIssue ? getSeverity(issueText) : "low";
+// ────────────────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────────────────
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-  if (!isIssue) {
-    return `<span class="status-badge status-clear">
-      <span class="status-icon">✔</span>
-      Clear
-    </span>`;
+// sheetRowNum = actual 1-based row number in the Responses sheet
+function parseSheetRow(row, sheetRowNum) {
+  if (!row || !row[COL.timestamp]) return null;
+  const ts = new Date(row[COL.timestamp]);
+  if (isNaN(ts.getTime())) return null;
+
+  const issueStr = (row[COL.issues] || "").toString().trim();
+  const issues   = issueStr
+    ? issueStr.split(/[,;]\s*/).map(s => s.trim()).filter(Boolean)
+    : [];
+  const hasIssue = issues.length > 0 && !issues.every(i => i === "No Issues Found");
+  const resolved = (row[10] || "").toString().includes("Resolved"); // col K = index 10
+
+  const rawPhotos  = (row[COL.photos] || "").toString().trim();
+  const photoLinks = buildPhotoLinks(rawPhotos);
+
+  return {
+    sheetRow:  sheetRowNum,
+    timestamp: ts.toISOString(),
+    date:      formatDate(ts),
+    time:      ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+    hour:      ts.getHours(),
+    inspector: (row[COL.inspector] || "").toString().trim(),
+    location:  (row[COL.location]  || "").toString().trim(),
+    issues,
+    hasIssue,
+    resolved,
+    notes:     (row[COL.notes] || "").toString().trim(),
+    photos:    photoLinks,
+  };
+}
+
+function todayDateStr() { return formatDate(new Date()); }
+
+function formatDate(dt) {
+  return dt.toLocaleDateString("en-US",
+    { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
+function daysSince(dt) {
+  return (Date.now() - dt.getTime()) / 86400000;
+}
+
+// ────────────────────────────────────────────────────────────
+// 4. LOG TO INSPECTION LOG SHEET
+// ────────────────────────────────────────────────────────────
+function logToSheet(ss, parsed, hasIssues) {
+  let sheet = ss.getSheetByName(CONFIG.LOG_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.LOG_SHEET);
+    const headers = [
+      "Timestamp","Date","Time","Day of Week",
+      "Location","Inspector","Issues Found","Issue Count",
+      "Notes","Photo Links","Status","Resolved By","Resolution Time"
+    ];
+    const hRange = sheet.getRange(1, 1, 1, headers.length);
+    hRange.setValues([headers]);
+    hRange.setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold");
+    sheet.setFrozenRows(1);
   }
 
-  if (severity === "high") {
-    return `<span class="status-badge status-issue-high">
-      <span class="status-icon">⚠</span>
-      Issue (High)
-    </span>`;
-  } else if (severity === "medium") {
-    return `<span class="status-badge status-issue-medium">
-      <span class="status-icon">⚠</span>
-      Issue (Med)
-    </span>`;
+  const ts      = parsed.timestamp;
+  const timeStr = Utilities.formatDate(ts, Session.getScriptTimeZone(), "h:mm a");
+  const dateStr = Utilities.formatDate(ts, Session.getScriptTimeZone(), "MM/dd/yyyy");
+  const dayStr  = Utilities.formatDate(ts, Session.getScriptTimeZone(), "EEEE");
+  const status  = hasIssues ? "⚠️ Needs Attention" : "✅ All Clear";
+  // Store as JSON array string for reliable round-trip parsing
+  const photoStr = parsed.photoUrls.length > 0
+    ? JSON.stringify(parsed.photoUrls)
+    : "No photos";
+
+  const row = [
+    ts, dateStr, timeStr, dayStr,
+    parsed.location, parsed.inspector,
+    parsed.issues.join("; "), parsed.issues.length,
+    parsed.notes, photoStr,
+    status, "", ""
+  ];
+
+  sheet.appendRow(row);
+
+  const lastRow = sheet.getLastRow();
+  const bg = hasIssues ? "#fff3cd" : "#d4edda";
+  sheet.getRange(lastRow, 1, 1, row.length).setBackground(bg);
+  sheet.getRange(lastRow, 11).setFontColor(hasIssues ? "#856404" : "#155724").setFontWeight("bold");
+}
+
+// ────────────────────────────────────────────────────────────
+// 5. ALERT EMAIL
+// ────────────────────────────────────────────────────────────
+function sendAlertEmail(parsed) {
+  const ts = Utilities.formatDate(
+    parsed.timestamp, Session.getScriptTimeZone(),
+    "EEEE, MMMM d, yyyy 'at' h:mm a"
+  );
+
+  const subject   = `🚨 Facility Issue Reported — ${parsed.location}`;
+  const photoHtml = parsed.photoUrls.length > 0
+    ? `<h3 style="color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:5px;margin-top:16px;">📷 Photos</h3>
+       <ul style="padding:0;list-style:none;">
+         ${parsed.photoUrls.map((url, i) =>
+           `<li style="padding:4px 0;"><a href="${url}" style="color:#1a3a5c;font-weight:bold;">View Photo ${i + 1} →</a></li>`
+         ).join("")}
+       </ul>`
+    : "";
+
+  const htmlBody = `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
+     border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+  <div style="background:#1a3a5c;color:white;padding:20px;text-align:center;">
+    <h2 style="margin:0;">🚨 Facility Issue Reported</h2>
+    <p style="margin:5px 0 0;opacity:0.85;">St. Francis de Sales High School — Facilities</p>
+  </div>
+  <div style="background:#fff3cd;border-left:5px solid #b91c1c;padding:14px 18px;margin:16px;">
+    <strong>⚠️ Action Required</strong> — Issues have been reported and require investigation.
+  </div>
+  <div style="padding:0 20px 10px;">
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:8px;font-weight:bold;width:120px;color:#555;">📍 Location</td>
+          <td style="padding:8px;font-size:16px;font-weight:bold;">${parsed.location}</td></tr>
+      <tr style="background:#f8f9fa;">
+          <td style="padding:8px;font-weight:bold;color:#555;">🕐 Reported</td>
+          <td style="padding:8px;">${ts}</td></tr>
+      <tr><td style="padding:8px;font-weight:bold;color:#555;">👤 Inspector</td>
+          <td style="padding:8px;">${parsed.inspector}</td></tr>
+    </table>
+    <h3 style="color:#b91c1c;border-bottom:2px solid #b91c1c;padding-bottom:5px;margin-top:16px;">
+      Issues Identified</h3>
+    <ul style="list-style:none;padding:0;">
+      ${parsed.issues.map(i =>
+        `<li style="padding:6px 0;border-bottom:1px solid #eee;">⚠️ ${i}</li>`
+      ).join("")}
+    </ul>
+    ${photoHtml}
+    ${parsed.notes ? `
+    <h3 style="border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:16px;">📝 Notes</h3>
+    <p style="background:#f8f9fa;padding:10px;border-radius:4px;">${parsed.notes}</p>` : ""}
+  </div>
+  <div style="background:#f8f9fa;padding:12px;text-align:center;
+       font-size:11px;color:#888;border-top:1px solid #ddd;">
+    Automated message · St. Francis de Sales Facility Inspection System
+  </div>
+</div>`;
+
+  MailApp.sendEmail({
+    to:       CONFIG.MAINTENANCE_EMAIL,
+    subject,
+    htmlBody,
+    name: CONFIG.FROM_NAME,
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// 6. TRENDS SHEET
+// ────────────────────────────────────────────────────────────
+function updateTrends(ss, parsed, hasIssues) {
+  let sheet = ss.getSheetByName(CONFIG.TRENDS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.TRENDS_SHEET);
+    sheet.getRange("A1").setValue("TRENDS & ANALYTICS — Auto-Generated")
+         .setFontSize(13).setFontWeight("bold").setFontColor("#1a3a5c");
+    const headers = ["Location","Total Checks","Issues Reported","Issue Rate %"];
+    const hRange  = sheet.getRange(3, 1, 1, 4);
+    hRange.setValues([headers]);
+    hRange.setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold");
+    sheet.setFrozenRows(3);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  let rowIdx = -1;
+  for (let i = 3; i < data.length; i++) {
+    if (data[i][0] === parsed.location) { rowIdx = i + 1; break; }
+  }
+
+  if (rowIdx === -1) {
+    const nr = sheet.getLastRow() + 1;
+    sheet.getRange(nr, 1).setValue(parsed.location);
+    sheet.getRange(nr, 2).setValue(1);
+    sheet.getRange(nr, 3).setValue(hasIssues ? 1 : 0);
+    sheet.getRange(nr, 4).setFormula(`=IF(B${nr}=0,0,C${nr}/B${nr}*100)`)
+         .setNumberFormat("0.0\"%\"");
   } else {
-    return `<span class="status-badge status-issue-low">
-      <span class="status-icon">⚠</span>
-      Issue (Low)
-    </span>`;
+    sheet.getRange(rowIdx, 2).setValue((sheet.getRange(rowIdx, 2).getValue() || 0) + 1);
+    sheet.getRange(rowIdx, 3).setValue(
+      (sheet.getRange(rowIdx, 3).getValue() || 0) + (hasIssues ? 1 : 0)
+    );
   }
 }
 
-/***** OPEN ISSUES TABLE *****/
-
-function renderOpenIssues(list) {
-  const tbody = document.getElementById("open-issues-body");
-  tbody.innerHTML = "";
-
-  list.forEach(r => {
-    const tr = document.createElement("tr");
-    const photosHtml = buildPhotosHtml(r.photos || []);
-    const severity = getSeverity(r.issueText);
-    let rowClass = "issue-row-medium";
-    if (severity === "high") rowClass = "issue-row-high";
-    if (severity === "low") rowClass = "issue-row-low";
-    tr.className = rowClass;
-
-    tr.innerHTML = `
-      <td>${formatTime(r.timestamp)}</td>
-      <td>${r.location || ""}</td>
-      <td>${r.issueText || ""}</td>
-      <td>${r.notes || ""}</td>
-      <td>${r.inspector || ""}</td>
-      <td>${photosHtml}</td>
-      <td><button class="resolve-btn" data-row="${r.sheetRow}" data-inspector="${r.inspector || ""}">Resolve</button></td>
-    `;
-    tbody.appendChild(tr);
+// ────────────────────────────────────────────────────────────
+// 7. ONE-TIME SETUP — run once manually after pasting script
+// ────────────────────────────────────────────────────────────
+function setupFormTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === "onFormSubmit") ScriptApp.deleteTrigger(t);
   });
-
-  attachPhotoHoverHandlers();
-  tbody.querySelectorAll(".resolve-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const row = btn.getAttribute("data-row");
-      const inspector = btn.getAttribute("data-inspector");
-      resolveIssue(row, inspector);
-    });
-  });
+  const form = FormApp.openByUrl("https://docs.google.com/forms/d/1NqM4VzYqgct8mvS3Z-XDP604Lpy7iwM5sLE094BxWUA/edit");
+  ScriptApp.newTrigger("onFormSubmit").forForm(form).onFormSubmit().create();
+  Logger.log("✅ Form submit trigger created.");
 }
-
-/***** RECENT ACTIVITY TABLE *****/
-
-function renderRecentLog(list) {
-  const tbody = document.getElementById("recent-log-body");
-  tbody.innerHTML = "";
-
-  list.forEach(r => {
-    const tr = document.createElement("tr");
-    const photosHtml = buildPhotosHtml(r.photos || []);
-    const statusBadge = buildStatusBadge(r.status, r.issueText);
-
-    tr.innerHTML = `
-      <td>${formatTime(r.timestamp)}</td>
-      <td>${r.location || ""}</td>
-      <td>${statusBadge}</td>
-      <td>${r.issueText || ""}</td>
-      <td>${r.notes || ""}</td>
-      <td>${r.inspector || ""}</td>
-      <td>${photosHtml}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  attachPhotoHoverHandlers();
-}
-
-/***** CHARTS *****/
-
-function renderCharts(d) {
-  const hourly = d.hourly || [];
-  const daily = d.daily || [];
-
-  const hourlyLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
-  const hourlyClear = hourly.map(h => h.clear || 0);
-  const hourlyIssue = hourly.map(h => h.issue || 0);
-
-  const dailyLabels = daily.map(x => x.date);
-  const dailyClear = daily.map(x => x.clear || 0);
-  const dailyIssue = daily.map(x => x.issue || 0);
-
-  if (hourlyChart) hourlyChart.destroy();
-  if (dailyChart) dailyChart.destroy();
-
-  hourlyChart = new Chart(document.getElementById("hourlyChart"), {
-    type: "bar",
-    data: {
-      labels: hourlyLabels,
-      datasets: [
-        { label: "Clear", data: hourlyClear, backgroundColor: "rgba(22,163,74,0.7)" },
-        { label: "Issues", data: hourlyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: "#111827" } } },
-      scales: {
-        x: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } },
-        y: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } }
-      }
-    }
-  });
-
-  dailyChart = new Chart(document.getElementById("dailyChart"), {
-    type: "bar",
-    data: {
-      labels: dailyLabels,
-      datasets: [
-        { label: "Clear", data: dailyClear, backgroundColor: "rgba(22,163,74,0.7)" },
-        { label: "Issues", data: dailyIssue, backgroundColor: "rgba(239,68,68,0.7)" }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: "#111827" } } },
-      scales: {
-        x: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } },
-        y: { ticks: { color: "#4b5563" }, grid: { color: "#e5e7eb" } }
-      }
-    }
-  });
-}
-
-/***** UTILITIES *****/
-
-function formatTime(ts) {
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("en-US", {
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-/***** PHOTOS: DRIVE LINKS → THUMBNAILS *****/
-
-function extractDriveId(url) {
-  if (!url) return null;
-  const idMatch = url.match(/id=([^&]+)/);
-  if (idMatch && idMatch[1]) return idMatch[1];
-
-  const dMatch = url.match(/\/d\/([^/]+)/);
-  if (dMatch && dMatch[1]) return dMatch[1];
-
-  return null;
-}
-
-function getDriveViewUrl(url) {
-  const id = extractDriveId(url);
-  if (!id) return url;
-  return `https://drive.google.com/uc?export=view&id=${id}`;
-}
-
-function getDriveThumbUrl(url) {
-  const id = extractDriveId(url);
-  if (!id) return url;
-  return `https://drive.google.com/thumbnail?id=${id}`;
-}
-
-function buildPhotosHtml(photos) {
-  if (!photos || photos.length === 0) return "";
-  return photos
-    .map((url, idx) => {
-      const viewUrl = getDriveViewUrl(url);
-      const thumbUrl = getDriveThumbUrl(url);
-      const label = photos.length === 1 ? "Photo" : `Photo ${idx + 1}`;
-      return `<a href="${viewUrl}" target="_blank" class="photo-link" data-photo-thumb="${thumbUrl}">${label}</a>`;
-    })
-    .join("");
-}
-
-function attachPhotoHoverHandlers() {
-  const links = document.querySelectorAll(".photo-link");
-  links.forEach(link => {
-    link.addEventListener("mouseenter", onPhotoMouseEnter);
-    link.addEventListener("mouseleave", onPhotoMouseLeave);
-    link.addEventListener("mousemove", onPhotoMouseMove);
-  });
-}
-
-function onPhotoMouseEnter(e) {
-  const thumb = e.currentTarget.getAttribute("data-photo-thumb");
-  if (!thumb) return;
-  photoTooltipImg.src = thumb;
-  photoTooltip.style.display = "block";
-  positionTooltip(e);
-}
-
-function onPhotoMouseLeave() {
-  photoTooltip.style.display = "none";
-  photoTooltipImg.src = "";
-}
-
-function onPhotoMouseMove(e) {
-  positionTooltip(e);
-}
-
-function positionTooltip(e) {
-  const offset = 16;
-  const x = e.clientX + offset;
-  const y = e.clientY + offset;
-  photoTooltip.style.left = x + "px";
-  photoTooltip.style.top = y + "px";
-}
-
-/***** ⭐ RESOLVE ISSUE — WITH INSTANT DASHBOARD REFRESH ⭐ *****/
-
-async function resolveIssue(sheetRow, inspector) {
-  if (!sheetRow) return;
-  const confirmed = confirm(`Mark issue on row ${sheetRow} as resolved?`);
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "resolve",
-        sheetRow: Number(sheetRow),
-        resolvedBy: inspector || "Dashboard"
-      })
-    });
-
-    const result = await res.json();
-
-    if (result && result.success) {
-      // ⭐ FORCE immediate dashboard refresh
-      fetchData();          // refresh data
-      location.reload();    // hard refresh UI
-    } else {
-      alert("Resolve failed");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Error resolving issue");
-  }
-}
-
-/***** ⭐ REFRESH BUTTON — FULL PAGE RELOAD ⭐ *****/
-
-document.getElementById("refresh-btn").addEventListener("click", () => {
-  location.reload();
-});
-
-/***** ⭐ AUTO-REFRESH EVERY 60 SECONDS ⭐ *****/
-
-setInterval(() => {
-  location.reload();
-}, 60000);
-
-/***** INIT *****/
-
-initTooltip();
-fetchData();
