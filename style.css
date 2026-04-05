@@ -70,7 +70,7 @@ body {
   padding: 24px 24px 40px;
 }
 
-/* SUMMARY CARDS (Option 2) */
+/* SUMMARY CARDS */
 .cards {
   display: grid;
   grid-template-columns: repeat(6, minmax(140px, 1fr));
@@ -159,6 +159,7 @@ thead {
 th, td {
   padding: 8px 10px;
   border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
 }
 
 th {
@@ -188,6 +189,31 @@ tbody tr:hover {
 .resolve-btn:hover {
   background: #15803d;
   transform: translateY(-1px);
+}
+
+/* PHOTO LINKS + TOOLTIP */
+.photo-link {
+  color: #1d4ed8;
+  text-decoration: underline;
+  cursor: pointer;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.photo-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.photo-tooltip img {
+  max-width: 220px;
+  max-height: 220px;
+  display: block;
 }
 
 /* RESPONSIVE */
