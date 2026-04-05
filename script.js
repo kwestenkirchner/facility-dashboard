@@ -1,5 +1,6 @@
-// Use your deployed Web App URL here
+// ⭐ USE YOUR NEW WEB APP URL HERE
 const API_URL = "https://script.google.com/macros/s/AKfycby0uNWxJHcxNv5ODLEzI0lDWwNeaZ6sa-H-SdGup8AksZIFZN4MPTQu8yxGCwJsx2Zr/exec";
+
 let hourlyChart, dailyChart;
 let photoTooltip, photoTooltipImg;
 
@@ -281,7 +282,7 @@ function positionTooltip(e) {
   photoTooltip.style.top = y + "px";
 }
 
-/***** RESOLVE *****/
+/***** ⭐ RESOLVE ISSUE — WITH INSTANT DASHBOARD REFRESH ⭐ *****/
 
 async function resolveIssue(sheetRow, inspector) {
   if (!sheetRow) return;
@@ -298,9 +299,13 @@ async function resolveIssue(sheetRow, inspector) {
         resolvedBy: inspector || "Dashboard"
       })
     });
+
     const result = await res.json();
+
     if (result && result.success) {
-      fetchData();
+      // ⭐ FORCE immediate dashboard refresh
+      fetchData();          // refresh data
+      location.reload();    // hard refresh UI
     } else {
       alert("Resolve failed");
     }
@@ -310,10 +315,19 @@ async function resolveIssue(sheetRow, inspector) {
   }
 }
 
-/***** INIT *****/
+/***** ⭐ REFRESH BUTTON — FULL PAGE RELOAD ⭐ *****/
 
-document.getElementById("refresh-btn").addEventListener("click", fetchData);
-setInterval(fetchData, 60000);
+document.getElementById("refresh-btn").addEventListener("click", () => {
+  location.reload();
+});
+
+/***** ⭐ AUTO-REFRESH EVERY 60 SECONDS ⭐ *****/
+
+setInterval(() => {
+  location.reload();
+}, 60000);
+
+/***** INIT *****/
 
 initTooltip();
 fetchData();
