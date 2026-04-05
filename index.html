@@ -19,6 +19,8 @@
   </header>
 
   <main class="container">
+
+    <!-- SUMMARY CARDS -->
     <section class="cards">
       <div class="card">
         <h2>Today Total</h2>
@@ -46,6 +48,45 @@
       </div>
     </section>
 
+    <!-- FULL-WIDTH OPEN ISSUES -->
+    <section class="panel full-width-panel">
+      <h3>Open Issues (Last 48 Hours)</h3>
+      <table class="wide-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Location / Area</th>
+            <th>Issue</th>
+            <th>Notes</th>
+            <th>Inspector</th>
+            <th>Photos</th>
+            <th>Resolve</th>
+          </tr>
+        </thead>
+        <tbody id="open-issues-body"></tbody>
+      </table>
+    </section>
+
+    <!-- FULL-WIDTH RECENT ACTIVITY -->
+    <section class="panel full-width-panel">
+      <h3>Recent Activity</h3>
+      <table class="wide-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Location / Area</th>
+            <th>Status</th>
+            <th>Issue</th>
+            <th>Notes</th>
+            <th>Inspector</th>
+            <th>Photos</th>
+          </tr>
+        </thead>
+        <tbody id="recent-log-body"></tbody>
+      </table>
+    </section>
+
+    <!-- CHARTS BELOW -->
     <section class="charts-row">
       <div class="chart-card">
         <h3>Hourly Activity</h3>
@@ -57,43 +98,6 @@
       </div>
     </section>
 
-    <section class="flex-row">
-      <div class="panel">
-        <h3>Open Issues (Last 48 Hours)</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 140px;">Time</th>
-              <th style="width: 160px;">Location / Area</th>
-              <th style="width: 220px;">Issue</th>
-              <th style="width: 220px;">Notes</th>
-              <th style="width: 120px;">Inspector</th>
-              <th style="width: 140px;">Photos</th>
-              <th style="width: 80px;">Resolve</th>
-            </tr>
-          </thead>
-          <tbody id="open-issues-body"></tbody>
-        </table>
-      </div>
-
-      <div class="panel">
-        <h3>Recent Activity</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 140px;">Time</th>
-              <th style="width: 160px;">Location / Area</th>
-              <th style="width: 80px;">Status</th>
-              <th style="width: 220px;">Issue</th>
-              <th style="width: 220px;">Notes</th>
-              <th style="width: 120px;">Inspector</th>
-              <th style="width: 140px;">Photos</th>
-            </tr>
-          </thead>
-          <tbody id="recent-log-body"></tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
   <div id="photo-tooltip" class="photo-tooltip" style="display:none;">
