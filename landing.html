@@ -69,7 +69,7 @@ main {
   overflow: hidden;
 }
 
-/* Location banner at top of card */
+/* Location banner */
 .loc-banner {
   background: var(--navy);
   color: white;
@@ -95,8 +95,7 @@ main {
 /* Card body */
 .card-body { padding: 28px 24px; }
 
-/* ── ACCESS CODE SECTION ── */
-#access-section {}
+/* ── FIELD STYLES ── */
 .field-label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -125,9 +124,31 @@ main {
   outline: none;
   transition: border-color 0.2s;
   text-align: center;
+  margin-bottom: 4px;
 }
 .code-input:focus { border-color: var(--navy); }
 .code-input.error { border-color: var(--red); animation: shake 0.3s ease; }
+
+.name-select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--navy);
+  outline: none;
+  transition: border-color 0.2s;
+  background: white;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  margin-bottom: 4px;
+}
+.name-select:focus { border-color: var(--navy); }
+
 @keyframes shake {
   0%,100%{transform:translateX(0)}
   25%{transform:translateX(-6px)}
@@ -137,11 +158,17 @@ main {
   color: var(--red);
   font-size: 0.75rem;
   font-weight: 600;
-  margin-top: 8px;
+  margin-top: 6px;
   display: none;
   text-align: center;
 }
 .error-msg.show { display: block; }
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
 
 /* ── VERIFIED SECTION ── */
 #verified-section { display: none; }
@@ -186,15 +213,9 @@ main {
   letter-spacing: 0.02em;
 }
 .btn:active { transform: scale(0.98); }
-.btn-primary {
-  background: var(--navy);
-  color: white;
-}
+.btn-primary { background: var(--navy); color: white; }
 .btn-primary:hover { background: var(--navy-dark); }
-.btn-red {
-  background: var(--red);
-  color: white;
-}
+.btn-red { background: var(--red); color: white; }
 .btn-red:hover { background: var(--red-light); }
 .btn-outline {
   background: transparent;
@@ -259,10 +280,25 @@ footer {
         </div>
       </div>
 
-      <!-- Access code entry -->
+      <!-- Access code + name entry (first time only) -->
       <div id="access-section">
+        <span class="field-label">Your Name</span>
+        <p class="field-desc">Select your name — it will be remembered on this device.</p>
+        <select class="name-select" id="name-select">
+          <option value="">— Select your name —</option>
+          <option value="Ken Westenkirchner">Ken Westenkirchner</option>
+          <option value="Matt Prater">Matt Prater</option>
+          <option value="Corey Driver">Corey Driver</option>
+          <option value="Murell Gregory">Murell Gregory</option>
+          <option value="Khyle Weirich">Khyle Weirich</option>
+          <option value="Paris Martin">Paris Martin</option>
+          <option value="Michael Hagmeyer">Michael Hagmeyer</option>
+        </select>
+
+        <hr class="divider">
+
         <span class="field-label">Staff Access Code</span>
-        <p class="field-desc">Enter the staff access code to submit an inspection report. This will be saved on your device so you only need to enter it once.</p>
+        <p class="field-desc">Enter the staff access code provided by your supervisor.</p>
         <input
           class="code-input"
           id="code-input"
@@ -272,7 +308,7 @@ footer {
           autocomplete="off"
           maxlength="20"
         />
-        <div class="error-msg" id="error-msg">❌ Incorrect access code. Please try again.</div>
+        <div class="error-msg" id="error-msg">❌ Please select your name and enter the correct access code.</div>
         <button class="btn btn-primary" onclick="verifyCode()">Verify &amp; Continue →</button>
       </div>
 
@@ -282,10 +318,15 @@ footer {
           <div class="verified-icon">✅</div>
           <div>
             <div class="verified-text">Access Verified</div>
-            <div class="verified-sub">You're all set — tap below to open the inspection form</div>
+            <div class="verified-sub">Tap below to open your inspection form</div>
           </div>
         </div>
 
+        <div class="info-row">
+          <span class="info-icon">👤</span>
+          <span class="info-label">Inspector</span>
+          <span class="info-val" id="info-name">—</span>
+        </div>
         <div class="info-row">
           <span class="info-icon">📍</span>
           <span class="info-label">Location</span>
@@ -303,7 +344,7 @@ footer {
         </div>
 
         <button class="btn btn-red" onclick="openForm()">📋 Open Inspection Form →</button>
-        <button class="btn btn-outline" onclick="resetCode()">Use a different code</button>
+        <button class="btn btn-outline" onclick="resetAll()">Not you? Switch user</button>
       </div>
 
     </div>
@@ -315,12 +356,14 @@ footer {
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const ACCESS_CODE    = "SFSK26";
-const STORAGE_KEY    = "sfds_access_verified";
-const FORM_BASE_URL  = "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform";
-const ENTRY_FIELD    = "entry.1902915184";
+const ACCESS_CODE      = "SFSK26";
+const STORAGE_KEY      = "sfds_access_verified";
+const STORAGE_NAME_KEY = "sfds_inspector_name";
+const FORM_BASE_URL    = "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform";
+const ENTRY_LOCATION   = "entry.1902915184";
+const ENTRY_NAME       = "entry.1736125068";
 
-// ── VALID LOCATIONS — must match Google Form dropdown exactly ─
+// ── VALID LOCATIONS ───────────────────────────────────────────
 const VALID_LOCATIONS = [
   "3rd Floor Restroom",
   "2nd Floor Restroom",
@@ -354,26 +397,28 @@ updateTime();
 function init() {
   const loc = getLocation();
 
-  // Show location name
   document.getElementById("loc-display").textContent = loc || "Unknown Location";
   document.getElementById("info-loc").textContent    = loc || "Unknown";
 
-  // Unknown location
+  // Unknown location check
   if (!loc || !VALID_LOCATIONS.includes(loc)) {
     document.getElementById("unknown-section").style.display = "block";
     document.getElementById("access-section").style.display  = "none";
     return;
   }
 
-  // Check if already verified on this device
+  // Check if already verified AND name saved on this device
   const verified = localStorage.getItem(STORAGE_KEY);
-  if (verified === "true") {
+  const savedName = localStorage.getItem(STORAGE_NAME_KEY);
+
+  if (verified === "true" && savedName) {
+    document.getElementById("info-name").textContent = savedName;
     showVerified();
   } else {
     document.getElementById("access-section").style.display = "block";
   }
 
-  // Allow Enter key to submit code
+  // Allow Enter key to submit
   document.getElementById("code-input").addEventListener("keydown", function(e) {
     if (e.key === "Enter") verifyCode();
   });
@@ -381,14 +426,18 @@ function init() {
 
 // ── VERIFY CODE ───────────────────────────────────────────────
 function verifyCode() {
-  const input = document.getElementById("code-input");
-  const entered = input.value.trim().toUpperCase();
+  const input    = document.getElementById("code-input");
+  const nameEl   = document.getElementById("name-select");
+  const entered  = input.value.trim().toUpperCase();
+  const name     = nameEl.value;
 
-  if (entered === ACCESS_CODE) {
-    // Save to device
+  if (entered === ACCESS_CODE && name) {
+    // Save both to device
     localStorage.setItem(STORAGE_KEY, "true");
+    localStorage.setItem(STORAGE_NAME_KEY, name);
     input.classList.remove("error");
     document.getElementById("error-msg").classList.remove("show");
+    document.getElementById("info-name").textContent = name;
     showVerified();
   } else {
     input.classList.add("error");
@@ -406,19 +455,22 @@ function showVerified() {
 
 // ── OPEN FORM ─────────────────────────────────────────────────
 function openForm() {
-  const loc = getLocation();
-  const encoded = encodeURIComponent(loc);
-  const url = `${FORM_BASE_URL}?usp=pp_url&${ENTRY_FIELD}=${encoded}`;
+  const loc  = getLocation();
+  const name = localStorage.getItem(STORAGE_NAME_KEY) || "";
+  const url  = `${FORM_BASE_URL}?usp=pp_url`
+             + `&${ENTRY_LOCATION}=${encodeURIComponent(loc)}`
+             + `&${ENTRY_NAME}=${encodeURIComponent(name)}`;
   window.location.href = url;
 }
 
-// ── RESET CODE (use different code) ──────────────────────────
-function resetCode() {
+// ── RESET (switch user) ───────────────────────────────────────
+function resetAll() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_NAME_KEY);
   document.getElementById("verified-section").style.display = "none";
   document.getElementById("access-section").style.display   = "block";
   document.getElementById("code-input").value = "";
-  document.getElementById("code-input").focus();
+  document.getElementById("name-select").value = "";
 }
 
 // ── START ─────────────────────────────────────────────────────
