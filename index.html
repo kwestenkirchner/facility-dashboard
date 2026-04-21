@@ -289,6 +289,8 @@ const LOCATIONS = [
   // "Swim Locker Room",
 ];
 
+  const STALE_HOURS = 2;
+
 const INSPECTORS = [
   "Ken Westenkirchner","Matt Prater","Corey Driver",
   "Murell Gregory","Khyle Weirich","Paris Martin","Michael Hagmeyer"
@@ -360,13 +362,52 @@ function renderAll(){
   renderCharts(); populateFilters(); renderTable();
 }
 
+  function isToday(dateString) {
+  const d = new Date(dateString);
+  const today = new Date();
+  return d.getFullYear() === today.getFullYear() &&
+         d.getMonth() === today.getMonth() &&
+         d.getDate() === today.getDate();
+}
+
+  function hoursAgo(dateString) {
+  const dt = new Date(dateString);
+  const diffMs = Date.now() - dt.getTime();
+  return diffMs / (1000 * 60 * 60); // hours
+}
+
 function renderLocGrid(){
   document.getElementById("loc-grid").innerHTML=LOCATIONS.map(loc=>{
-    const last=DATA.locationStatus[loc];
-    let cls,badge;
-    if(!last){cls="ll";badge=`<span class="lbadge bgx">⬜ Not Checked</span>`;}
-    else if(last.hasIssue){cls="lr";badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;}
-    else{cls="lg";badge=`<span class="lbadge bgg">✅ All Clear</span>`;}
+    let last = DATA.locationStatus[loc];
+
+// Reset if the last inspection was NOT today
+if (last && !isToday(last.timestamp)) {
+  last = null;
+}
+
+    // Check if last inspection is stale (over X hours)
+let isStale = false;
+if (last && hoursAgo(last.timestamp) > STALE_HOURS) {
+  isStale = true;
+}
+
+if (!last) {
+  cls = "ll";
+  badge = `<span class="lbadge bgx">⬜ Not Checked</span>`;
+}
+else if (last.hasIssue) {
+  cls = "lr";
+  badge = `<span class="lbadge bgr">🔴 Issue Reported</span>`;
+}
+else if (isStale) {
+  cls = "sa"; // amber/yellow class
+  badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
+}
+else {
+  cls = "lg";
+  badge = `<span class="lbadge bgg">✅ All Clear</span>`;
+}
+
     const meta=last
       ?`<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
       :`<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
