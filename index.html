@@ -467,7 +467,7 @@ function renderInspectors(){
   el.innerHTML=INSPECTORS.map(name=>{
     const n=c[name]||0, pct=Math.round(n/max*100);
     const s=name.split(" ")[0]+" "+name.split(" ").slice(-1)[0];
-    return`<div class="icard" style="${n===0?"opacity:0.5":""}">
+    return `<div class="icard" style="${n===0?"opacity:0.5":""}">
       <div class="iname">${s}</div><div class="inum">${n}</div>
       <div class="isub">${n===1?"check":"checks"} today</div>
       <div class="ibar-w"><div class="ibar" style="width:${pct}%;background:${n?"var(--navy)":"var(--border)"}"></div></div>
