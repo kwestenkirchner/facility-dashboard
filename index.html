@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Facilities Dashboard</title>
 
-  <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -31,7 +30,6 @@
       padding: 20px 30px;
       font-size: 28px;
       font-weight: 700;
-      letter-spacing: 0.5px;
     }
 
     .container {
@@ -40,7 +38,6 @@
       margin: auto;
     }
 
-    /* Stat Cards */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -69,7 +66,6 @@
       color: var(--navy);
     }
 
-    /* Section Titles */
     h2 {
       margin-top: 40px;
       margin-bottom: 15px;
@@ -81,7 +77,6 @@
       display: inline-block;
     }
 
-    /* Lists */
     .list {
       background: var(--white);
       border-radius: 6px;
@@ -109,7 +104,6 @@
       color: var(--gray-dark);
     }
 
-    /* Inspector Grid */
     .inspectors-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -135,7 +129,6 @@
       color: var(--gray-dark);
     }
 
-    /* Loading */
     #loading {
       text-align: center;
       padding: 40px;
@@ -151,7 +144,6 @@
 
 <div class="container">
 
-  <!-- STAT CARDS -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-title">Inspections Today</div>
@@ -178,37 +170,38 @@
       <div class="stat-value" id="s5">0/0</div>
     </div>
   </div>
-  <!-- RECENT INSPECTIONS -->
+
   <h2>Recent Inspections</h2>
   <div class="list" id="recent-list">
     <div id="loading">Loading recent inspections…</div>
   </div>
 
-  <!-- OPEN ISSUES -->
   <h2>Open Issues</h2>
   <div class="list" id="open-list">
     <div id="loading">Loading open issues…</div>
   </div>
 
-  <!-- INSPECTOR ACTIVITY -->
   <h2>Inspector Activity</h2>
-  <div<script>
-/* -------------------------------
-   SIMPLE DOM HELPER (NO JQUERY)
---------------------------------*/
+  <div class="inspectors-grid" id="inspectors-grid">
+    <div id="loading">Loading inspector activity…</div>
+  </div>
+
+</div>
+
+<script>
+const LOCATIONS = [
+  "Cafeteria Mens Restroom",
+  "2nd Level Restroom",
+  "3rd Level Restroom"
+];
+
 function $(id, value) {
   if (value === undefined) return document.getElementById(id);
   document.getElementById(id).textContent = value;
 }
 
-/* -------------------------------
-   BACKEND URL
---------------------------------*/
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz2ZTl_XB81zarTyRNOw12Tnmm-WqjsybhjM-sczF2HBQDeXi2etVmJI4EJT2TxP4IO/exec";
 
-/* -------------------------------
-   GLOBAL DATA STORE
---------------------------------*/
 let DATA = {
   recent: [],
   openIssues: [],
@@ -216,18 +209,13 @@ let DATA = {
   todayCount: 0,
   todayClear: 0,
   todayIssues: 0,
-  openIssueCount: 0,
-  locationsCovered: 0
+  openIssueCount: 0
 };
 
-/* -------------------------------
-   FETCH DATA FROM BACKEND
---------------------------------*/
 async function fetchData() {
   try {
     const res = await fetch(BACKEND_URL);
     const json = await res.json();
-
     DATA = json;
 
     renderAll();
@@ -240,35 +228,24 @@ async function fetchData() {
   }
 }
 
-/* -------------------------------
-   RENDER ALL STAT CARDS
---------------------------------*/
 function renderAll() {
   $("s1", DATA.todayCount);
   $("s2", DATA.todayClear);
   $("s3", DATA.todayIssues);
   $("s4", DATA.openIssueCount);
 
-  // FIXED: UNIQUE LOCATIONS COVERED TODAY
   const todayStr = new Date().toISOString().slice(0, 10);
-
   const todaysInspections = DATA.recent.filter(r => r.date === todayStr);
-
   const uniqueToday = new Set(todaysInspections.map(r => r.location)).size;
 
-  const totalLocations = LOCATIONS.length;
-
-  $("s5", uniqueToday + "/" + totalLocations);
+  $("s5", uniqueToday + "/" + LOCATIONS.length);
 }
 
-/* -------------------------------
-   RENDER RECENT INSPECTIONS
---------------------------------*/
 function renderRecent() {
   const box = $("recent-list");
   box.innerHTML = "";
 
-  if (!DATA.recent || DATA.recent.length === 0) {
+  if (!DATA.recent.length) {
     box.innerHTML = "<div class='item'>No recent inspections.</div>";
     return;
   }
@@ -284,14 +261,11 @@ function renderRecent() {
   });
 }
 
-/* -------------------------------
-   RENDER OPEN ISSUES
---------------------------------*/
 function renderOpenIssues() {
   const box = $("open-list");
   box.innerHTML = "";
 
-  if (!DATA.openIssues || DATA.openIssues.length === 0) {
+  if (!DATA.openIssues.length) {
     box.innerHTML = "<div class='item'>No open issues.</div>";
     return;
   }
@@ -307,14 +281,11 @@ function renderOpenIssues() {
   });
 }
 
-/* -------------------------------
-   RENDER INSPECTOR ACTIVITY
---------------------------------*/
 function renderInspectors() {
   const grid = $("inspectors-grid");
   grid.innerHTML = "";
 
-  if (!DATA.inspectors || DATA.inspectors.length === 0) {
+  if (!DATA.inspectors.length) {
     grid.innerHTML = "<div>No inspector activity.</div>";
     return;
   }
@@ -330,25 +301,9 @@ function renderInspectors() {
   });
 }
 
-/* -------------------------------
-   LOCATION LIST (REQUIRED)
---------------------------------*/
-const LOCATIONS = [
-  "Area 1", "Area 2", "Area 3", "Area 4",
-  // You can replace these with your real 146 areas
-];
-
-/* -------------------------------
-   INITIAL LOAD
---------------------------------*/
 fetchData();
-setInterval(fetchData, 30000); // refresh every 30 seconds
+setInterval(fetchData, 30000);
 </script>
+
 </body>
 </html>
-
-
-    <div id="loading">Loading inspector activity…</div>
-  </div>
-
-</div> <!-- END CONTAINER -->
