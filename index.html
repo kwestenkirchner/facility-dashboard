@@ -357,7 +357,8 @@ async function resolveIssue(sheetRow, btnEl){
 function renderAll(){
   $("s1",DATA.todayCount);  $("s2",DATA.todayClear);
   $("s3",DATA.todayIssues); $("s4",DATA.openIssueCount);
-  $("s5",DATA.locationsCovered+"/10"); $("s6",DATA.weekCount);
+  $("s5", DATA.locationsCovered + "/" + LOCATIONS.length);
+  $("s6",DATA.weekCount);
   renderLocGrid(); renderOpenIssues(); renderInspectors();
   renderCharts(); populateFilters(); renderTable();
 }
@@ -416,20 +417,42 @@ else {
 }
 
 function renderOpenIssues(){
-  const el=document.getElementById("open-issues");
-  const items=DATA.openIssues||[];
-  if(!items.length){
-    el.innerHTML=`<div class="none">✅ No open issues in the last 48 hours!</div>`;
+  const el = document.getElementById("open-issues");
+
+  // Always show unresolved issues, regardless of age
+  const items = (DATA.allIssues || []).filter(r => !r.resolved);
+
+  if (!items.length) {
+    el.innerHTML = `<div class="none">✅ No open issues!</div>`;
     return;
   }
-  el.innerHTML=items.map(r=>{
-    const issueText=(r.issues||[]).filter(i=>i!=="No Issues Found").join(", ");
-    const isResolved = r.resolved;
 
-    // Photo links
-    const photoLinks = (r.photos||[]).map((url,i)=>
-      `<a class="photo-link" href="${url}" target="_blank">📷 Photo ${i+1}</a>`
-    ).join(" ");
+  el.innerHTML = items.map(r => {
+    const issueText = (r.issues || [])
+      .filter(i => i !== "No Issues Found")
+      .join(", ");
+
+    const photoLinks = (r.photos || [])
+      .map((url, i) => `<a class="photo-link" href="${url}" target="_blank">📷 Photo ${i+1}</a>`)
+      .join(" ");
+
+    return `
+      <li class="iitem">
+        <span class="idot"></span>
+        <div style="flex:1;min-width:0;">
+          <div class="iloc">${r.location}</div>
+          <div class="itype">${issueText}</div>
+          <div class="imeta">Reported by ${r.inspector} · ${timeAgo(new Date(r.timestamp))}</div>
+          ${photoLinks ? `<div style="margin-top:4px;">${photoLinks}</div>` : ""}
+        </div>
+        <div class="iactions">
+          <button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>
+          <span class="itime">${r.time}</span>
+        </div>
+      </li>
+    `;
+  }).join("");
+}
 
     // Action area — resolve button or resolved tag
     const actionHtml = isResolved
