@@ -357,7 +357,15 @@ async function resolveIssue(sheetRow, btnEl){
 function renderAll(){
   $("s1",DATA.todayCount);  $("s2",DATA.todayClear);
   $("s3",DATA.todayIssues); $("s4",DATA.openIssueCount);
-  $("s5", DATA.locationsCovered + "/" + LOCATIONS.length);
+// Count unique locations inspected today
+const uniqueToday = new Set(DATA.today.map(r => r.location)).size;
+
+// Total active locations
+const totalLocations = LOCATIONS.length;
+
+// Update the card
+$("s5", uniqueToday + "/" + totalLocations);
+
   $("s6",DATA.weekCount);
   renderLocGrid(); renderOpenIssues(); renderInspectors();
   renderCharts(); populateFilters(); renderTable();
