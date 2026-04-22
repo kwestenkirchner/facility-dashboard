@@ -416,14 +416,12 @@ else {
   }).join("");
 }
 
-function renderOpenIssues(){
+function renderOpenIssues() {
   const el = document.getElementById("open-issues");
-
-  // Always show unresolved issues, regardless of age
-  const items = (DATA.allIssues || []).filter(r => !r.resolved);
+  const items = DATA.openIssues || [];
 
   if (!items.length) {
-    el.innerHTML = `<div class="none">✅ No open issues!</div>`;
+    el.innerHTML = `<div class="none">✅ No open issues in the last 48 hours!</div>`;
     return;
   }
 
@@ -432,13 +430,21 @@ function renderOpenIssues(){
       .filter(i => i !== "No Issues Found")
       .join(", ");
 
+    const isResolved = r.resolved;
+
     const photoLinks = (r.photos || [])
-      .map((url, i) => `<a class="photo-link" href="${url}" target="_blank">📷 Photo ${i+1}</a>`)
+      .map((url, i) =>
+        `<a class="photo-link" href="${url}" target="_blank">📷 Photo ${i + 1}</a>`
+      )
       .join(" ");
 
+    const actionHtml = isResolved
+      ? `<span class="resolved-tag">✅ Resolved</span>`
+      : `<button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>`;
+
     return `
-      <li class="iitem">
-        <span class="idot"></span>
+      <li class="iitem${isResolved ? " resolved" : ""}">
+        <span class="idot${isResolved ? " resolved-dot" : ""}"></span>
         <div style="flex:1;min-width:0;">
           <div class="iloc">${r.location}</div>
           <div class="itype">${issueText}</div>
@@ -446,7 +452,7 @@ function renderOpenIssues(){
           ${photoLinks ? `<div style="margin-top:4px;">${photoLinks}</div>` : ""}
         </div>
         <div class="iactions">
-          <button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>
+          ${actionHtml}
           <span class="itime">${r.time}</span>
         </div>
       </li>
