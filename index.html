@@ -452,22 +452,7 @@ function renderOpenIssues(){
       </li>
     `;
   }).join("");
-}
 
-    // Action area — resolve button or resolved tag
-    const actionHtml = isResolved
-      ? `<span class="resolved-tag">✅ Resolved</span>`
-      : `<button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>`;
-
-    return`<li class="iitem${isResolved?" resolved":""}">
-      <span class="idot${isResolved?" resolved-dot":""}"></span>
-      <div style="flex:1;min-width:0;">
-        <div class="iloc">${r.location}</div>
-        <div class="itype">${issueText}</div>
-        <div class="imeta">Reported by ${r.inspector} · ${timeAgo(new Date(r.timestamp))}</div>
-        ${photoLinks ? `<div style="margin-top:4px;">${photoLinks}</div>` : ""}
-      </div>
-      <div class="iactions">
         ${actionHtml}
         <span class="itime">${r.time}</span>
       </div>
