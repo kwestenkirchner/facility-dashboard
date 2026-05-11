@@ -273,11 +273,11 @@ async function fetchData() {
       return;
     }
 
-    // Normalize backend fields to match frontend expectations
+    // Normalize backend fields to match your original dashboard
     DATA = json.map(r => ({
       Timestamp: r.timestamp || "",
-      Date: (r.timestamp ? r.timestamp.split("T")[0] : ""),
-      Time: (r.timestamp ? r.timestamp.split("T")[1].substring(0,5) : ""),
+      Date: r.timestamp ? r.timestamp.split("T")[0] : "",
+      Time: r.timestamp ? r.timestamp.split("T")[1].substring(0,5) : "",
       Inspector: r.inspector || "",
       Location: r.location || "",
       Issues: r.issues || "",
