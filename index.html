@@ -57,6 +57,7 @@ main {
   padding: 20px;
 }
 
+/* SUMMARY CARDS */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -83,6 +84,7 @@ main {
   color: var(--navy);
 }
 
+/* LOCATION GRID (Simple Version A) */
 .loc-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -112,6 +114,7 @@ main {
 .loc.warn { background: var(--amber-bg); }
 .loc.bad { background: var(--red-bg); }
 
+/* TABLE */
 .table-wrap {
   background: var(--white);
   padding: 16px;
@@ -143,6 +146,7 @@ tbody td {
 }
 </style>
 </head>
+
 <body>
 
 <header>
@@ -151,7 +155,7 @@ tbody td {
 </header>
 
 <main>
-<!-- SUMMARY CARDS -->
+<!-- SUMMARY CARDS (ORIGINAL 3 ONLY) -->
 <div class="cards">
   <div class="card">
     <h2>Total Inspections (24h)</h2>
@@ -164,17 +168,12 @@ tbody td {
   </div>
 
   <div class="card">
-    <h2>On Time Rate</h2>
-    <div class="value" id="card-ontime">0%</div>
-  </div>
-
-  <div class="card">
     <h2>Last Updated</h2>
     <div class="value" id="card-updated">--</div>
   </div>
 </div>
 
-<!-- LOCATION STATUS GRID -->
+<!-- LOCATION STATUS GRID (SIMPLE VERSION A) -->
 <div class="loc-grid" id="loc-grid"></div>
 
 <!-- TABLE OF ALL INSPECTIONS -->
@@ -195,15 +194,14 @@ tbody td {
     <tbody id="tbody">
       <tr>
         <td colspan="7" class="loading">
-          <span class="spin"></span>Loading...
+          Loading...
         </td>
       </tr>
     </tbody>
   </table>
 </div>
 
-</main>
-
+<!-- TOAST -->
 <div id="toast" style="
   position: fixed;
   bottom: 20px;
@@ -218,11 +216,13 @@ tbody td {
   font-size: 15px;
 "></div>
 <script>
-// Your Google Apps Script Web App URL
+// GOOGLE APPS SCRIPT ENDPOINT
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
+// AUTO REFRESH INTERVAL (2 MINUTES)
 const REFRESH_MS = 120000;
 
+// LOCATIONS (SIMPLE GRID VERSION A)
 const LOCATIONS = [
   "Auxiliary Gym Locker Room - South",
   "2nd Level Restroom",
@@ -230,19 +230,8 @@ const LOCATIONS = [
   "Cafeteria Mens Restroom"
 ];
 
-const STALE_HOURS = 2;
-
-const INSPECTORS = [
-  "Ken Westenkirchner",
-  "Matt Prater",
-  "Corey Driver",
-  "Murell Gregory",
-  "Khyle Weirich",
-  "Paris Martin",
-  "Michael Hagmeyer"
-];
-
-let DATA = null;
+// DATA HOLDER
+let DATA = [];
 
 // CLOCK
 setInterval(() => {
@@ -261,8 +250,7 @@ function showToast(msg) {
   t.style.opacity = "1";
   setTimeout(() => { t.style.opacity = "0"; }, 3000);
 }
-
-// FETCH DATA
+// FETCH DATA (NORMALIZES BACKEND FIELDS)
 async function fetchData() {
   try {
     const res = await fetch(ENDPOINT);
@@ -273,7 +261,7 @@ async function fetchData() {
       return;
     }
 
-    // Normalize backend fields to match your original dashboard
+    // Normalize backend fields to match original dashboard expectations
     DATA = json.map(r => ({
       Timestamp: r.timestamp || "",
       Date: r.timestamp ? r.timestamp.split("T")[0] : "",
@@ -292,9 +280,9 @@ async function fetchData() {
   }
 }
 
-
 // AUTO REFRESH
 setInterval(fetchData, REFRESH_MS);
+
 // RENDER ALL
 function renderAll() {
   if (!DATA || DATA.length === 0) return;
@@ -303,39 +291,35 @@ function renderAll() {
   renderLocGrid();
   renderTable();
 }
-
-// RENDER SUMMARY CARDS
+// RENDER SUMMARY CARDS (ORIGINAL 3)
 function renderCards() {
   const now = Date.now();
   const cutoff = now - (24 * 60 * 60 * 1000);
 
   let total = 0;
   let issues = 0;
-  let onTime = 0;
   let updated = "--";
 
   DATA.forEach(row => {
     const ts = new Date(row.Timestamp).getTime();
     if (ts >= cutoff) {
       total++;
-      if (row.Issues && row.Issues.trim() !== "") issues++;
-      if (row.Status && row.Status.toLowerCase() === "on time") onTime++;
+      if (row.Issues && row.Issues.trim() !== "" && row.Issues !== "No Issues Found") {
+        issues++;
+      }
     }
   });
-
-  const onTimeRate = total > 0 ? Math.round((onTime / total) * 100) : 0;
-
-  document.getElementById("card-total").textContent = total;
-  document.getElementById("card-issues").textContent = issues;
-  document.getElementById("card-ontime").textContent = onTimeRate + "%";
 
   if (DATA.length > 0) {
     updated = DATA[0].Timestamp || "--";
   }
+
+  document.getElementById("card-total").textContent = total;
+  document.getElementById("card-issues").textContent = issues;
   document.getElementById("card-updated").textContent = updated;
 }
 
-// RENDER LOCATION GRID
+// RENDER LOCATION GRID (SIMPLE VERSION A)
 function renderLocGrid() {
   const grid = document.getElementById("loc-grid");
   grid.innerHTML = "";
@@ -348,10 +332,10 @@ function renderLocGrid() {
 
     if (rows.length === 0) {
       statusClass = "warn";
-      statusText = "No recent data";
+      statusText = "No Recent Data";
     } else {
       const last = rows[0];
-      if (last.Issues && last.Issues.trim() !== "") {
+      if (last.Issues && last.Issues !== "No Issues Found") {
         statusClass = "bad";
         statusText = "Issues Reported";
       }
@@ -368,7 +352,7 @@ function renderLocGrid() {
     grid.appendChild(div);
   });
 }
-// RENDER TABLE
+// RENDER TABLE (ORIGINAL LAYOUT)
 function renderTable() {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
@@ -385,19 +369,17 @@ function renderTable() {
   DATA.forEach(row => {
     const tr = document.createElement("tr");
 
-    const date = row.Date || row.Timestamp || "";
+    const date = row.Date || "";
     const time = row.Time || "";
     const loc = row.Location || "";
-    const insp = row.Inspector || row["Your Name"] || "";
-    const issues = row.Issues || row["Issues Found"] || "";
+    const insp = row.Inspector || "";
+    const issues = row.Issues || "";
     const status = row.Status || "";
-    const photo = row.Photo || row.Photos || "";
+    const photo = row.Photo || "";
 
-    let photoHTML = "";
+    let photoHTML = "--";
     if (photo && photo.trim() !== "") {
       photoHTML = `<a href="${photo}" target="_blank">View</a>`;
-    } else {
-      photoHTML = "--";
     }
 
     tr.innerHTML = `
@@ -413,10 +395,12 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 }
+
 // INITIAL LOAD
 fetchData();
 
 </script>
 
+</main>
 </body>
 </html>
