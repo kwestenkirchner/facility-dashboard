@@ -325,42 +325,52 @@ async function fetchData(){
     const raw = await res.json();
     if(raw.error) throw new Error(raw.error);
 
-    // ⭐ NORMALIZE BACKEND FIELDS ⭐
+       // ⭐ NORMALIZE BACKEND FIELDS (DEFENSIVE) ⭐
+    console.log("RAW FROM ENDPOINT:", raw);  // temporary debug
+
+    const allIssuesRaw   = Array.isArray(raw.allIssues)   ? raw.allIssues   : [];
+    const recentLogRaw   = Array.isArray(raw.recentLog)   ? raw.recentLog   : [];
+    const locationStatus = raw.locationStatus             || {};
+    const inspectorCounts= raw.inspectorCounts            || {};
+    const hourly         = raw.hourly                     || {};
+    const byLocation     = raw.byLocation                 || {};
+    const daily          = Array.isArray(raw.daily)       ? raw.daily       : [];
+
     DATA = {
-      todayCount: raw.todayCount,
-      todayClear: raw.todayClear,
-      todayIssues: raw.todayIssues,
-      openIssueCount: raw.openIssueCount,
-      locationsCovered: raw.locationsCovered,
-      weekCount: raw.weekCount,
+      todayCount:       raw.todayCount       ?? 0,
+      todayClear:       raw.todayClear       ?? 0,
+      todayIssues:      raw.todayIssues      ?? 0,
+      openIssueCount:   raw.openIssueCount   ?? 0,
+      locationsCovered: raw.locationsCovered ?? 0,
+      weekCount:        raw.weekCount        ?? 0,
 
-      locationStatus: raw.locationStatus,
+      locationStatus,
 
-      allIssues: raw.allIssues.map(r => ({
-        location: r.location,
-        inspector: r.inspector,
-        timestamp: r.timestamp,
-        time: r.timestamp.split("T")[1].substring(0,5),
-        issues: Array.isArray(r.issues) ? r.issues : [r.issues],
-        photos: r.photos || [],
-        sheetRow: r.sheetRow,
-        resolved: r.resolved,
-        hasIssue: r.hasIssue
+      allIssues: allIssuesRaw.map(r => ({
+        location:   r.location,
+        inspector:  r.inspector,
+        timestamp:  r.timestamp,
+        time:       (r.timestamp || "").split("T")[1]?.substring(0,5) || "",
+        issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+        photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+        sheetRow:   r.sheetRow,
+        resolved:   !!r.resolved,
+        hasIssue:   !!r.hasIssue
       })),
 
-      inspectorCounts: raw.inspectorCounts,
-      hourly: raw.hourly,
-      byLocation: raw.byLocation,
-      daily: raw.daily,
+      inspectorCounts,
+      hourly,
+      byLocation,
+      daily,
 
-      recentLog: raw.recentLog.map(r => ({
-        date: r.timestamp.split("T")[0],
-        time: r.timestamp.split("T")[1].substring(0,5),
-        location: r.location,
+      recentLog: recentLogRaw.map(r => ({
+        date:      (r.timestamp || "").split("T")[0] || "",
+        time:      (r.timestamp || "").split("T")[1]?.substring(0,5) || "",
+        location:  r.location,
         inspector: r.inspector,
-        issues: Array.isArray(r.issues) ? r.issues : [r.issues],
-        photos: r.photos || [],
-        hasIssue: r.hasIssue
+        issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+        photos:    Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+        hasIssue:  !!r.hasIssue
       }))
     };
 
