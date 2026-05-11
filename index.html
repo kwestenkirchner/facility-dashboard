@@ -273,13 +273,25 @@ async function fetchData() {
       return;
     }
 
-    DATA = json;
+    // Normalize backend fields to match frontend expectations
+    DATA = json.map(r => ({
+      Timestamp: r.timestamp || "",
+      Date: (r.timestamp ? r.timestamp.split("T")[0] : ""),
+      Time: (r.timestamp ? r.timestamp.split("T")[1].substring(0,5) : ""),
+      Inspector: r.inspector || "",
+      Location: r.location || "",
+      Issues: r.issues || "",
+      Status: (r.issues && r.issues !== "No Issues Found") ? "Issue" : "On Time",
+      Photo: r.photo || ""
+    }));
+
     renderAll();
     showToast("Dashboard updated");
   } catch (err) {
     console.error("Fetch error:", err);
   }
 }
+
 
 // AUTO REFRESH
 setInterval(fetchData, REFRESH_MS);
