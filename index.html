@@ -347,15 +347,15 @@ async function fetchData(){
       locationStatus,
 
       allIssues: allIssuesRaw.map(r => ({
-        location:   r.location,
-        inspector:  r.inspector,
-        timestamp:  r.timestamp,
-        time:       (r.timestamp || "").split("T")[1]?.substring(0,5) || "",
-        issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-        photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-        sheetRow:   r.sheetRow,
-        resolved:   !!r.resolved,
-        hasIssue:   !!r.hasIssue
+      location:   r.location,
+      inspector:  r.inspector,
+      timestamp:  new Date(r.timestamp),   // ⭐ FIXED
+      time:       new Date(r.timestamp).toTimeString().substring(0,5),  // ⭐ FIXED
+      issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+      photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+      sheetRow:   r.sheetRow,
+      resolved:   !!r.resolved,
+      hasIssue:   !!r.hasIssue
       })),
 
       inspectorCounts,
@@ -364,8 +364,9 @@ async function fetchData(){
       daily,
 
       recentLog: recentLogRaw.map(r => ({
-        date:      (r.timestamp || "").split("T")[0] || "",
-        time:      (r.timestamp || "").split("T")[1]?.substring(0,5) || "",
+        timestamp: new Date(r.timestamp),   // ⭐ add this
+        date:      new Date(r.timestamp).toISOString().split("T")[0],
+        time:      new Date(r.timestamp).toTimeString().substring(0,5),
         location:  r.location,
         inspector: r.inspector,
         issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
