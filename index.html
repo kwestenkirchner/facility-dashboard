@@ -484,7 +484,7 @@ function renderLocGrid(){
 
     let cls, badge;
 
-    if(!last){
+        if(!last){
       cls="ll";
       badge=`<span class="lbadge bgx">⬜ Not Checked</span>`;
     }
@@ -492,27 +492,27 @@ function renderLocGrid(){
       cls="lr";
       badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;
     }
-else if(isStale){
-  const mins = last.minutesSince;
+    else if(isStale){
+      const mins = last.minutesSince;
 
-  if (mins >= 120) {
-    cls = "lr";
-    badge = `<span class="lbadge bgr blink-critical">⛔ Critical Overdue</span>`;
-  }
-  else if (mins >= 60) {
-    cls = "sa";
-    badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
-  }
-  else if (mins >= 45) {
-    cls = "sa";
-    badge = `<span class="lbadge bgx" style="background:#fff8e1;color:#b45309;">⌛ Due Soon</span>`;
-  }
+      if (mins >= 120) {
+        cls = "lr";
+        badge = `<span class="lbadge bgr blink-critical">⛔ Critical Overdue</span>`;
+      }
+      else if (mins >= 60) {
+        cls = "sa";
+        badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
+      }
+      else if (mins >= 45) {
+        cls = "sa";
+        badge = `<span class="lbadge bgx" style="background:#fff8e1;color:#b45309;">⌛ Due Soon</span>`;
+      }
+    }
+    else{
+      cls="lg";
+      badge=`<span class="lbadge bgg">✅ All Clear</span>`;
+    }
 }
-else{
-  cls="lg";
-  badge=`<span class="lbadge bgg">✅ All Clear</span>`;
-}
-
 
     /// ⭐ Color‑coded timer (matches badge thresholds)
     const timerColor =
@@ -584,26 +584,6 @@ function renderOpenIssues() {
 
     container.appendChild(card);
   });
-}
-
-  el.innerHTML = items.map(r=>{
-    const issueText = (r.issues||[]).filter(i=>i!=="No Issues Found").join(", ");
-    const photoLinks = (r.photos||[]).map((u,i)=>`<a class="photo-link" href="${u}" target="_blank">📷 Photo ${i+1}</a>`).join("");
-
-    return `<li class="iitem">
-      <span class="idot"></span>
-      <div style="flex:1;min-width:0;">
-        <div class="iloc">${r.location}</div>
-        <div class="itype">${issueText}</div>
-        <div class="imeta">Reported by ${r.inspector} · ${timeAgo(new Date(r.timestamp))}</div>
-        ${photoLinks ? `<div style="margin-top:4px;">${photoLinks}</div>` : ""}
-      </div>
-      <div class="iactions">
-        <button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>
-        <span class="itime">${r.time}</span>
-      </div>
-    </li>`;
-  }).join("");
 }
 
 // ─────────────────────────────────────────────────────────────
