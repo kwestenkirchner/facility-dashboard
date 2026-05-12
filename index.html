@@ -492,26 +492,27 @@ function renderLocGrid(){
       cls="lr";
       badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;
     }
-    else if(isStale){
-      const mins = last.minutesSince;
+else if(isStale){
+  const mins = last.minutesSince;
 
-      if (mins >= 120) {
-        cls = "lr";
-        badge = `<span class="lbadge bgr blink-critical">⛔ Critical Overdue</span>`;
-      }
-      else if (mins >= 60) {
-        cls = "sa";
-        badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
-      }
-      else if (mins >= 45) {
-        cls = "sa";
-        badge = `<span class="lbadge bgx" style="background:#fff8e1;color:#b45309;">⌛ Due Soon</span>`;
-      }
-    }
-    else{
-      cls="lg";
-      badge=`<span class="lbadge bgg">✅ All Clear</span>`;
-    }
+  if (mins >= 120) {
+    cls = "lr";
+    badge = `<span class="lbadge bgr blink-critical">⛔ Critical Overdue</span>`;
+  }
+  else if (mins >= 60) {
+    cls = "sa";
+    badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
+  }
+  else if (mins >= 45) {
+    cls = "sa";
+    badge = `<span class="lbadge bgx" style="background:#fff8e1;color:#b45309;">⌛ Due Soon</span>`;
+  }
+}
+else{
+  cls="lg";
+  badge=`<span class="lbadge bgg">✅ All Clear</span>`;
+}
+
 
     /// ⭐ Color‑coded timer (matches badge thresholds)
     const timerColor =
