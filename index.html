@@ -473,9 +473,18 @@ function renderLocGrid(){
   document.getElementById("loc-grid").innerHTML = LOCATIONS.map(loc=>{
     let last = DATA.locationStatus[loc];
 
+    // Reset if not today
     if(last && !isToday(last.timestamp)) last = null;
 
+    // Determine stale/overdue
     let isStale = last && hoursAgo(last.timestamp) > STALE_HOURS;
+
+    // Correct issue logic:
+    // Issue exists ONLY if:
+    // - last entry exists
+    // - issues were reported
+    // - NOT resolved
+    const hasIssue = last && last.hasIssue;
 
     let cls, badge;
 
@@ -483,7 +492,7 @@ function renderLocGrid(){
       cls="ll";
       badge=`<span class="lbadge bgx">⬜ Not Checked</span>`;
     }
-    else if(last.hasIssue){
+    else if(hasIssue){
       cls="lr";
       badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;
     }
@@ -500,6 +509,21 @@ function renderLocGrid(){
       ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
       : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
 
+    return `
+      <div class="lcard ${cls}">
+        <div class="lname">${loc}</div>
+        ${badge}
+        <div class="lmeta">${meta}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+
+    const meta = last
+      ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
+      : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
+
     return `<div class="lcard ${cls}">
       <div class="lname">${loc}</div>
       ${badge}
@@ -510,14 +534,41 @@ function renderLocGrid(){
 // ─────────────────────────────────────────────────────────────
 //  OPEN ISSUES
 // ─────────────────────────────────────────────────────────────
-function renderOpenIssues(){
-  const el=document.getElementById("open-issues");
-  const items=(DATA.allIssues||[]).filter(r=>!r.resolved);
+function renderOpenIssues() {
+  const container = document.getElementById("open-issues");
+  container.innerHTML = "";
 
-  if(!items.length){
-    el.innerHTML=`<div class="none">✅ No open issues!</div>`;
+  const open = DATA.allIssues.filter(r =>
+    !r.resolved &&
+    r.issues !== "No Issues Found"
+  );
+
+  if (open.length === 0) {
+    container.innerHTML = `<div class="no-issues">No open issues 🎉</div>`;
     return;
   }
+
+  open.forEach(r => {
+    const card = document.createElement("div");
+    card.className = "issue-card";
+
+    card.innerHTML = `
+      <div class="issue-header">
+        <span class="issue-location">${r.location}</span>
+        <span class="issue-time">${r.timestamp.toTimeString().substring(0,5)}</span>
+      </div>
+
+      <div class="issue-body">
+        <div class="issue-text">${r.issues}</div>
+        <div class="issue-inspector">Reported by: ${r.inspector}</div>
+      </div>
+
+      <button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>
+    `;
+
+    container.appendChild(card);
+  });
+}
 
   el.innerHTML = items.map(r=>{
     const issueText = (r.issues||[]).filter(i=>i!=="No Issues Found").join(", ");
