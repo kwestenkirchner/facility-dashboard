@@ -513,12 +513,12 @@ function renderLocGrid(){
       badge=`<span class="lbadge bgg">✅ All Clear</span>`;
     }
 
-    // ⭐ Color‑coded timer (matches badge thresholds)
-    const timerColor =
-      last && last.minutesSince >= 120 ? '#b91c1c' :
-      last && last.minutesSince >= 60  ? '#b45309' :
-      last && last.minutesSince >= 45  ? '#d97706' :
-                                         '#6b7280';
+    /// ⭐ Color‑coded timer (matches badge thresholds)
+const timerColor =
+  last && last.minutesSince >= 120 ? '#b91c1c' :
+  last && last.minutesSince >= 60  ? '#b45309' :
+  last && last.minutesSince >= 45  ? '#d97706' :
+                                     '#6b7280';
 
 const timer = last
   ? `<span style="font-size:.75rem;color:${timerColor};">
