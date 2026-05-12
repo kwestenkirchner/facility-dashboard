@@ -479,11 +479,7 @@ function renderLocGrid(){
     // Determine stale/overdue
     let isStale = last && hoursAgo(last.timestamp) > STALE_HOURS;
 
-    // Correct issue logic:
-    // Issue exists ONLY if:
-    // - last entry exists
-    // - issues were reported
-    // - NOT resolved
+    // Correct issue logic
     const hasIssue = last && last.hasIssue;
 
     let cls, badge;
@@ -505,32 +501,33 @@ function renderLocGrid(){
       badge=`<span class="lbadge bgg">✅ All Clear</span>`;
     }
 
+    // ⭐ NEW: Inspection Due badge (non-destructive)
+    const dueBadge = last && last.due
+      ? `<span class="lbadge bgx" style="background:#fff3cd;color:#b45309;">⏰ Inspection Due</span>`
+      : "";
+
+    // ⭐ NEW: Color-coded timer
+    const timer = last
+      ? `<span style="font-size:.75rem;color:${last.minutesSince > 60 ? '#b45309' : '#6b7280'};">
+           ${last.minutesSince} min ago
+         </span>`
+      : "";
+
     const meta = last
-      ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
+      ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span><span>${timer}</span>`
       : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
 
     return `
       <div class="lcard ${cls}">
         <div class="lname">${loc}</div>
         ${badge}
+        ${dueBadge}
         <div class="lmeta">${meta}</div>
       </div>
     `;
   }).join("");
 }
 
-
-    const meta = last
-      ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span>`
-      : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
-
-    return `<div class="lcard ${cls}">
-      <div class="lname">${loc}</div>
-      ${badge}
-      <div class="lmeta">${meta}</div>
-    </div>`;
-  }).join("");
-}
 // ─────────────────────────────────────────────────────────────
 //  OPEN ISSUES
 // ─────────────────────────────────────────────────────────────
