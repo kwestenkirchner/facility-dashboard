@@ -520,30 +520,30 @@ function renderLocGrid(){
       last && last.minutesSince >= 45  ? '#d97706' :
                                          '#6b7280';
 
-    const timer = last
-      ? `<span style="font-size:.75rem;color:${timerColor};">
-           ${last.minutesSince} min ago
-         </span>`
-      : "";
+const timer = last
+  ? `<span style="font-size:.75rem;color:${timerColor};">
+       ${last.minutesSince} min ago
+     </span>`
+  : "";
 
-    // ⭐ Inspection Due badge
-    const dueBadge = last && last.due
-      ? `<span class="lbadge bgx" style="background:#fff3cd;color:#b45309;">⏰ Inspection Due</span>`
-      : "";
+// ⭐ Inspection Due badge
+const dueBadge = last && last.due
+  ? `<span class="lbadge bgx" style="background:#fff3cd;color:#b45309;">⏰ Inspection Due</span>`
+  : "";
 
-    const meta = last
-      ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span><span>${timer}</span>`
-      : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
+const meta = last
+  ? `<span>🕐 ${last.time}</span><span>👤 ${last.inspector}</span><span>${timer}</span>`
+  : `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
 
-    return `
-      <div class="lcard ${cls}">
-        <div class="lname">${loc}</div>
-        ${badge}
-        ${dueBadge}
-        <div class="lmeta">${meta}</div>
-      </div>
-    `;
-  }).join("");
+return `
+  <div class="lcard ${cls}">
+    <div class="lname">${loc}</div>
+    ${badge}
+    ${dueBadge}
+    <div class="lmeta">${meta}</div>
+  </div>
+`;
+}).join("");
 }
 
 // ─────────────────────────────────────────────────────────────
