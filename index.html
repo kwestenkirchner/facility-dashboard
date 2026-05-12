@@ -493,24 +493,42 @@ function renderLocGrid(){
       badge=`<span class="lbadge bgr">🔴 Issue Reported</span>`;
     }
     else if(isStale){
-      cls="sa";
-      badge=`<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
+      const mins = last.minutesSince;
+
+      if (mins >= 120) {
+        cls = "lr";
+        badge = `<span class="lbadge bgr blink-critical">⛔ Critical Overdue</span>`;
+      }
+      else if (mins >= 60) {
+        cls = "sa";
+        badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
+      }
+      else if (mins >= 45) {
+        cls = "sa";
+        badge = `<span class="lbadge bgx" style="background:#fff8e1;color:#b45309;">⌛ Due Soon</span>`;
+      }
     }
     else{
       cls="lg";
       badge=`<span class="lbadge bgg">✅ All Clear</span>`;
     }
 
-    // ⭐ NEW: Inspection Due badge (non-destructive)
-    const dueBadge = last && last.due
-      ? `<span class="lbadge bgx" style="background:#fff3cd;color:#b45309;">⏰ Inspection Due</span>`
-      : "";
+    // ⭐ Color‑coded timer (matches badge thresholds)
+    const timerColor =
+      last && last.minutesSince >= 120 ? '#b91c1c' :
+      last && last.minutesSince >= 60  ? '#b45309' :
+      last && last.minutesSince >= 45  ? '#d97706' :
+                                         '#6b7280';
 
-    // ⭐ NEW: Color-coded timer
     const timer = last
-      ? `<span style="font-size:.75rem;color:${last.minutesSince > 60 ? '#b45309' : '#6b7280'};">
+      ? `<span style="font-size:.75rem;color:${timerColor};">
            ${last.minutesSince} min ago
          </span>`
+      : "";
+
+    // ⭐ Inspection Due badge
+    const dueBadge = last && last.due
+      ? `<span class="lbadge bgx" style="background:#fff3cd;color:#b45309;">⏰ Inspection Due</span>`
       : "";
 
     const meta = last
