@@ -325,7 +325,6 @@ async function fetchData(){
     const raw = await res.json();
     if(raw.error) throw new Error(raw.error);
 
-       // ⭐ NORMALIZE BACKEND FIELDS (DEFENSIVE) ⭐
     console.log("RAW FROM ENDPOINT:", raw);  // temporary debug
 
     const allIssuesRaw   = Array.isArray(raw.allIssues)   ? raw.allIssues   : [];
@@ -346,45 +345,38 @@ async function fetchData(){
 
       locationStatus,
 
-allIssues: allIssuesRaw.map(r => ({
-  location:   r.location,
-  inspector:  r.inspector,
-
-  // ⭐ FIXED: convert timestamp string → Date object
-  timestamp:  new Date(r.timestamp),
-
-  // ⭐ FIXED: derive time from Date object
-  time:       new Date(r.timestamp).toTimeString().substring(0,5),
-
-  issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-  photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-
-  sheetRow:   r.sheetRow,
-  resolved:   !!r.resolved,
-  hasIssue:   !!r.hasIssue
-})),
+      allIssues: allIssuesRaw.map(r => ({
+        location:   r.location,
+        inspector:  r.inspector,
+        timestamp:  new Date(r.timestamp),
+        time:       new Date(r.timestamp).toTimeString().substring(0,5),
+        issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+        photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+        sheetRow:   r.sheetRow,
+        resolved:   !!r.resolved,
+        hasIssue:   !!r.hasIssue
+      })),
 
       inspectorCounts,
       hourly,
       byLocation,
       daily,
 
-recentLog: recentLogRaw.map(r => ({
-  // ⭐ FIXED: convert timestamp string → Date object
-  timestamp: new Date(r.timestamp),
+      recentLog: recentLogRaw.map(r => {
+        const ts = new Date(r.timestamp);
+        const valid = !isNaN(ts.getTime());
 
-  // ⭐ FIXED: derive date + time from Date object
-  date:      new Date(r.timestamp).toISOString().split("T")[0],
-  time:      new Date(r.timestamp).toTimeString().substring(0,5),
-
-  location:  r.location,
-  inspector: r.inspector,
-
-  issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-  photos:    Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-
-  hasIssue:  !!r.hasIssue
-})),
+        return {
+          timestamp: valid ? ts : null,
+          date:      valid ? ts.toISOString().split("T")[0] : "",
+          time:      valid ? ts.toTimeString().substring(0,5) : "",
+          location:  r.location,
+          inspector: r.inspector,
+          issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+          photos:    Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+          hasIssue:  !!r.hasIssue
+        };
+      })
     };
 
     renderAll();
