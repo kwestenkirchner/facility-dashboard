@@ -369,16 +369,22 @@ allIssues: allIssuesRaw.map(r => ({
       byLocation,
       daily,
 
-      recentLog: recentLogRaw.map(r => ({
-        timestamp: new Date(r.timestamp),   // ⭐ add this
-        date:      new Date(r.timestamp).toISOString().split("T")[0],
-        time:      new Date(r.timestamp).toTimeString().substring(0,5),
-        location:  r.location,
-        inspector: r.inspector,
-        issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-        photos:    Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-        hasIssue:  !!r.hasIssue
-      }))
+recentLog: recentLogRaw.map(r => ({
+  // ⭐ FIXED: convert timestamp string → Date object
+  timestamp: new Date(r.timestamp),
+
+  // ⭐ FIXED: derive date + time from Date object
+  date:      new Date(r.timestamp).toISOString().split("T")[0],
+  time:      new Date(r.timestamp).toTimeString().substring(0,5),
+
+  location:  r.location,
+  inspector: r.inspector,
+
+  issues:    Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+  photos:    Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+
+  hasIssue:  !!r.hasIssue
+})),
     };
 
     renderAll();
