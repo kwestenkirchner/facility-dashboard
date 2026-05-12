@@ -346,17 +346,23 @@ async function fetchData(){
 
       locationStatus,
 
-      allIssues: allIssuesRaw.map(r => ({
-      location:   r.location,
-      inspector:  r.inspector,
-      timestamp:  new Date(r.timestamp),   // ⭐ FIXED
-      time:       new Date(r.timestamp).toTimeString().substring(0,5),  // ⭐ FIXED
-      issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-      photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-      sheetRow:   r.sheetRow,
-      resolved:   !!r.resolved,
-      hasIssue:   !!r.hasIssue
-      })),
+allIssues: allIssuesRaw.map(r => ({
+  location:   r.location,
+  inspector:  r.inspector,
+
+  // ⭐ FIXED: convert timestamp string → Date object
+  timestamp:  new Date(r.timestamp),
+
+  // ⭐ FIXED: derive time from Date object
+  time:       new Date(r.timestamp).toTimeString().substring(0,5),
+
+  issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
+  photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+
+  sheetRow:   r.sheetRow,
+  resolved:   !!r.resolved,
+  hasIssue:   !!r.hasIssue
+})),
 
       inspectorCounts,
       hourly,
