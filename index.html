@@ -122,20 +122,24 @@
     </footer>
 
   </div>
-<script>
-/* ============================================================
-   GLOBAL DATA STORE
-   ============================================================ */
-let DATA = {};
 
-/* ⭐ YOUR REAL ENDPOINT ⭐ */
-const ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+  <!-- ⭐ Load Chart.js BEFORE your dashboard JS ⭐ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- ===== JAVASCRIPT (CHUNK 4) ===== -->
+  <script>
+  /* ============================================================
+     GLOBAL DATA STORE
+     ============================================================ */
+  let DATA = {};
 
-/* ============================================================
-   FETCH + NORMALIZE BACKEND DATA
-   ============================================================ */
+  /* ⭐ YOUR REAL ENDPOINT ⭐ */
+  const ENDPOINT =
+    "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+
+  /* ============================================================
+     FETCH + NORMALIZE BACKEND DATA
+     ============================================================ */
 async function fetchData() {
   const btn = document.getElementById("rbtn");
   btn.disabled = true;
