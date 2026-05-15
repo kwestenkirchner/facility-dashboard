@@ -5,62 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Facilities Dashboard</title>
 
-  <!-- Your existing CSS file — unchanged -->
+  <!-- External CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Favicon (optional, unchanged) -->
   <link rel="icon" type="image/png" href="favicon.png" />
 </head>
 
 <body>
   <div id="app">
+
+    <!-- ===== HEADER ===== -->
     <header>
-      <h1>Facilities Dashboard</h1>
-      <button id="rbtn" onclick="fetchData()">↻ Refresh</button>
+      <div class="hbar"></div>
+      <div class="hinner">
+        <div class="htitle">
+          <h1>Facilities Dashboard</h1>
+          <p>Live Daily Operations</p>
+        </div>
+
+        <div class="hright">
+          <div class="live-pill">
+            <div class="live-dot"></div>
+            LIVE
+          </div>
+          <div class="clock" id="clock"></div>
+          <button id="rbtn" class="rbtn" onclick="fetchData()">↻ Refresh</button>
+        </div>
+      </div>
     </header>
 
     <main>
-      <!-- ===== DASHBOARD GRID ===== -->
-      <div class="grid">
-
-        <!-- ===== TOP SUMMARY CARDS ===== -->
-        <div class="card">
-          <div class="ctitle">📍 Locations Covered — Today</div>
-          <div id="loc-today" class="big">0</div>
+      <!-- ===== SUMMARY STATS ===== -->
+      <div class="stats">
+        <div class="stat sn">
+          <div class="slabel">Locations Covered</div>
+          <div id="loc-today" class="sval">0</div>
+          <div class="ssub">Today</div>
         </div>
 
-        <div class="card">
-          <div class="ctitle">📝 Total Checks — Today</div>
-          <div id="checks-today" class="big">0</div>
+        <div class="stat sg">
+          <div class="slabel">Total Checks</div>
+          <div id="checks-today" class="sval">0</div>
+          <div class="ssub">Today</div>
         </div>
 
-        <div class="card">
-          <div class="ctitle">⚠️ Issues Found — Today</div>
-          <div id="issues-today" class="big red">0</div>
+        <div class="stat sr">
+          <div class="slabel">Issues Found</div>
+          <div id="issues-today" class="sval">0</div>
+          <div class="ssub">Today</div>
         </div>
 
-        <div class="card">
-          <div class="ctitle">✔ Issues Resolved — Today</div>
-          <div id="resolved-today" class="big green">0</div>
+        <div class="stat sa">
+          <div class="slabel">Issues Resolved</div>
+          <div id="resolved-today" class="sval">0</div>
+          <div class="ssub">Today</div>
         </div>
+      </div>
 
-      </div> <!-- end grid -->
-
-
-      <!-- ===== TWO-COLUMN SECTION ===== -->
+      <!-- ===== TWO COLUMN SECTION ===== -->
       <div class="two">
 
-        <!-- ===== OPEN / UNRESOLVED ISSUES ===== -->
+        <!-- OPEN ISSUES -->
         <div class="card">
           <div class="ctitle">🚨 Open / Unresolved Issues (last 48 h)</div>
-
-          <!-- FIXED: valid UL structure with LI placeholder -->
           <ul class="ilist" id="open-issues">
             <li class="loading"><span class="spin"></span>Loading…</li>
           </ul>
         </div>
 
-        <!-- ===== INSPECTOR ACTIVITY ===== -->
+        <!-- INSPECTOR ACTIVITY -->
         <div class="card">
           <div class="ctitle">👤 Inspector Activity — Today</div>
           <div class="ing" id="insp-grid">
@@ -68,52 +81,56 @@
           </div>
         </div>
 
-      </div> <!-- end two -->
-
-
-      <!-- ===== HOURLY TREND ===== -->
+      </div>
+      <!-- HOURLY TREND -->
       <div class="card">
         <div class="ctitle">⏱ Hourly Trend — Today</div>
-        <canvas id="hourlyChart"></canvas>
+        <div class="chart-wrap">
+          <canvas id="hourlyChart"></canvas>
+        </div>
       </div>
 
-
-      <!-- ===== LOCATION STATUS ===== -->
+      <!-- LOCATION STATUS -->
       <div class="card">
         <div class="ctitle">🏫 Location Status</div>
-        <div id="loc-status" class="locgrid">
+        <div id="loc-status" class="loc-grid">
           <div class="loading"><span class="spin"></span>Loading…</div>
         </div>
       </div>
 
-
-      <!-- ===== WEEKLY TREND ===== -->
+      <!-- WEEKLY TREND -->
       <div class="card">
         <div class="ctitle">📅 Weekly Trend</div>
-        <canvas id="weeklyChart"></canvas>
+        <div class="chart-wrap short">
+          <canvas id="weeklyChart"></canvas>
+        </div>
       </div>
-      <!-- ===== BY LOCATION (HEATMAP GRID) ===== -->
+
+      <!-- CHECKS BY LOCATION -->
       <div class="card">
         <div class="ctitle">📌 Checks by Location — Today</div>
-        <div id="by-location" class="locgrid">
+        <div id="by-location" class="loc-grid">
           <div class="loading"><span class="spin"></span>Loading…</div>
         </div>
       </div>
 
     </main>
 
-    <!-- ===== FOOTER ===== -->
-    <footer id="foot">
+    <!-- FOOTER -->
+    <footer class="foot" id="foot">
       Live data · Last refreshed: --
     </footer>
 
-  </div> <!-- end #app -->
+  </div>
 <script>
 /* ============================================================
    GLOBAL DATA STORE
    ============================================================ */
 let DATA = {};
-const ENDPOINT = "YOUR_ENDPOINT_URL_HERE";   // keep your existing value
+
+/* ⭐ YOUR REAL ENDPOINT ⭐ */
+const ENDPOINT =
+  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
 
 /* ============================================================
@@ -217,7 +234,6 @@ function renderSummary() {
 
 /* ============================================================
    OPEN ISSUES — FULLY PATCHED
-   Uses <li class="iitem"> structure
    ============================================================ */
 function renderOpenIssues() {
   const container = document.getElementById("open-issues");
@@ -265,7 +281,7 @@ function renderOpenIssues() {
 
 
 /* ============================================================
-   RESOLVE ISSUE — FULLY PATCHED
+   RESOLVE ISSUE
    ============================================================ */
 async function resolveIssue(row, btn) {
   try {
@@ -319,7 +335,7 @@ function renderInspectorGrid() {
 
 
 /* ============================================================
-   LOCATION STATUS GRID
+   LOCATION STATUS
    ============================================================ */
 function renderLocationStatus() {
   const grid = document.getElementById("loc-status");
@@ -428,26 +444,5 @@ function renderByLocation() {
    ============================================================ */
 fetchData();
 </script>
-<!-- ===== OPTIONAL REVERT SNIPPET =====
-If you ever want to revert the Open Issues list structure
-back to your original (invalid) HTML for spacing reasons:
-
-1. Replace:
-     <ul class="ilist" id="open-issues">
-       <li class="loading"><span class="spin"></span>Loading…</li>
-     </ul>
-
-2. With:
-     <ul class="ilist" id="open-issues">
-       <div class="loading"><span class="spin"></span>Loading…</div>
-     </ul>
-
-3. And change renderOpenIssues() to use:
-     const card = document.createElement("div");
-     card.className = "issue-card";
-
-This will restore your old spacing exactly.
-==================================================== -->
-
 </body>
 </html>
