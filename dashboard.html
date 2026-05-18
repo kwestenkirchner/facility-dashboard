@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilities Dashboard</title>
+
+<!-- Google Charts -->
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+<style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        background: #001F3F;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        font-size: 26px;
+        font-weight: 600;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 10px;
+    }
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .card {
+        background: white;
+        padding: 18px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .card h2 {
+        margin: 0;
+        font-size: 36px;
+        color: #001F3F;
+    }
+
+    .card p {
+        margin: 8px 0 0;
+        font-size: 16px;
+        color: #555;
+    }
+
+    .section-title {
+        font-size: 22px;
+        font-weight: 600;
+        margin: 25px 0 10px;
+        color: #001F3F;
+    }
+
+    .list {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .issue-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .issue-item:last-child {
+        border-bottom: none;
+    }
+
+    .open {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .resolved {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .chart-box {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+</style>
+
+<script>
+/************************************************************
+ * CONFIG
+ ************************************************************/
+const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
+
+/************************************************************
+ * LOAD DATA
+ ************************************************************/
+async function loadData() {
+    const res = await fetch(BACKEND_URL);
+    const json = await res.json();
+    return json.data || [];
+}
+
+/************************************************************
+ * RENDER SUMMARY CARDS
+ ************************************************************/
+function renderSummary(data) {
+    const total = data.length;
+    const open = data.filter(x => x.status === "Open").length;
+    const resolved = data.filter(x => x.status === "Resolved").length;
+    const issues = data.filter(x => x.type === "Issue Found").length;
+    const noIssues = data.filter(x => x.type === "No Issues").length;
+
+    document.getElementById("totalInspections").textContent = total;
+    document.getElementById("openIssues").textContent = open;
+    document.getElementById("resolvedIssues").textContent = resolved;
+    document.getElementById("issueFound").textContent = issues;
+    document.getElementById("noIssues").textContent = noIssues;
+}
+
+/************************************************************
+ * RENDER OPEN & RESOLVED LISTS
+ ************************************************************/
+function renderLists(data) {
+    const openList = document.getElementById("openList");
+    const resolvedList = document.getElementById("resolvedList");
+
+    openList.innerHTML = "";
+    resolvedList.innerHTML = "";
+
+    data.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "issue-item";
+
+        div.innerHTML = `
+            <strong>${item.location}</strong><br>
+            ${item.description || "(No description)"}<br>
+            <span class="${item.status === 'Open' ? 'open' : 'resolved'}">${item.status}</span>
+            &nbsp;•&nbsp; ${item.inspector}
+            &nbsp;•&nbsp; ${item.timestamp}
+        `;
+
+        if (item.status === "Open") openList.appendChild(div);
+        else resolvedList.appendChild(div);
+    });
+}
+
+/************************************************************
+ * LOCATION CHART
+ ************************************************************/
+function drawLocationChart(data) {
+    const counts = {};
+    data.forEach(x => {
+        counts[x.location] = (counts[x.location] || 0) + 1;
+    });
+
+    const rows = [["Location", "Inspections"]];
+    Object.keys(counts).forEach(loc => rows.push([loc, counts[loc]]));
+
+    const table = google.visualization.arrayToDataTable(rows);
+    const chart = new google.visualization.ColumnChart(document.getElementById("locationChart"));
+
+    chart.draw(table, {
+        title: "Inspections by Location",
+        legend: "none",
+        colors: ["#001F3F"]
+    });
+}
+
+/************************************************************
+ * INSPECTOR CHART
+ ************************************************************/
+function drawInspectorChart(data) {
+    const counts = {};
+    data.forEach(x => {
+        counts[x.inspector] = (counts[x.inspector] || 0) + 1;
+    });
+
+    const rows = [["Inspector", "Inspections"]];
+    Object.keys(counts).forEach(name => rows.push([name, counts[name]]));
+
+    const table = google.visualization.arrayToDataTable(rows);
+    const chart = new google.visualization.BarChart(document.getElementById("inspectorChart"));
+
+    chart.draw(table, {
+        title: "Inspections by Inspector",
+        legend: "none",
+        colors: ["#0074D9"]
+    });
+}
+
+/************************************************************
+ * TIMELINE CHART
+ ************************************************************/
+function drawTimelineChart(data) {
+    const counts = {};
+
+    data.forEach(x => {
+        const day = x.timestamp.split(" ")[0];
+        counts[day] = (counts[day] || 0) + 1;
+    });
+
+    const rows = [["Date", "Inspections"]];
+    Object.keys(counts).forEach(day => rows.push([day, counts[day]]));
+
+    const table = google.visualization.arrayToDataTable(rows);
+    const chart = new google.visualization.LineChart(document.getElementById("timelineChart"));
+
+    chart.draw(table, {
+        title: "Inspections Over Time",
+        legend: "none",
+        colors: ["#FF4136"]
+    });
+}
+
+/************************************************************
+ * MAIN
+ ************************************************************/
+google.charts.load("current", { packages: ["corechart"] });
+
+window.onload = async () => {
+    const data = await loadData();
+
+    renderSummary(data);
+    renderLists(data);
+
+    google.charts.setOnLoadCallback(() => {
+        drawLocationChart(data);
+        drawInspectorChart(data);
+        drawTimelineChart(data);
+    });
+};
+</script>
+
+</head>
+<body>
+
+<header>Facilities Inspection Dashboard</header>
+
+<div class="container">
+
+    <!-- SUMMARY CARDS -->
+    <div class="cards">
+        <div class="card">
+            <h2 id="totalInspections">0</h2>
+            <p>Total Inspections</p>
+        </div>
+        <div class="card">
+            <h2 id="openIssues">0</h2>
+            <p>Open Issues</p>
+        </div>
+        <div class="card">
+            <h2 id="resolvedIssues">0</h2>
+            <p>Resolved Issues</p>
+        </div>
+        <div class="card">
+            <h2 id="issueFound">0</h2>
+            <p>Issue Found</p>
+        </div>
+        <div class="card">
+            <h2 id="noIssues">0</h2>
+            <p>No Issues</p>
+        </div>
+    </div>
+
+    <!-- OPEN ISSUES -->
+    <div class="section-title">Open Issues</div>
+    <div id="openList" class="list"></div>
+
+    <!-- RESOLVED ISSUES -->
+    <div class="section-title">Resolved Issues</div>
+    <div id="resolvedList" class="list"></div>
+
+    <!-- CHARTS -->
+    <div class="section-title">Location Breakdown</div>
+    <div id="locationChart" class="chart-box" style="height: 350px;"></div>
+
+    <div class="section-title">Inspector Breakdown</div>
+    <div id="inspectorChart" class="chart-box" style="height: 350px;"></div>
+
+    <div class="section-title">Inspection Timeline</div>
+    <div id="timelineChart" class="chart-box" style="height: 350px;"></div>
+
+</div>
+
+</body>
+</html>
