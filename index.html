@@ -1,493 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Facilities Dashboard</title>
-
-  <!-- External CSS -->
-  <link rel="stylesheet" href="style.css" />
-
-  <link rel="icon" type="image/png" href="favicon.png" />
-</head>
-
-<body>
-  <div id="app">
-
-    <!-- ===== HEADER ===== -->
-    <header>
-      <div class="hbar"></div>
-      <div class="hinner">
-        <div class="htitle">
-          <h1>Facilities Dashboard</h1>
-          <p>Live Daily Operations</p>
-        </div>
-
-        <div class="hright">
-          <div class="live-pill">
-            <div class="live-dot"></div>
-            LIVE
-          </div>
-          <div class="clock" id="clock"></div>
-          <button id="rbtn" class="rbtn" onclick="fetchData()">↻ Refresh</button>
-        </div>
-      </div>
-    </header>
-
-    <main>
-
-      <!-- ===== SUMMARY STATS ===== -->
-      <div class="stats">
-        <div class="stat sn">
-          <div class="slabel">Locations Covered</div>
-          <div id="loc-today" class="sval">0</div>
-          <div class="ssub">Today</div>
-        </div>
-
-        <div class="stat sg">
-          <div class="slabel">Total Checks</div>
-          <div id="checks-today" class="sval">0</div>
-          <div class="ssub">Today</div>
-        </div>
-
-        <div class="stat sr">
-          <div class="slabel">Issues Found</div>
-          <div id="issues-today" class="sval">0</div>
-          <div class="ssub">Today</div>
-        </div>
-
-        <div class="stat sa">
-          <div class="slabel">Issues Resolved</div>
-          <div id="resolved-today" class="sval">0</div>
-          <div class="ssub">Today</div>
-        </div>
-      </div>
-
-      <!-- ===== TWO COLUMN SECTION ===== -->
-      <div class="two">
-
-        <!-- OPEN ISSUES -->
-        <div class="card">
-          <div class="ctitle">🚨 Open / Unresolved Issues (last 48 h)</div>
-          <ul class="ilist" id="open-issues">
-            <li class="loading"><span class="spin"></span>Loading…</li>
-          </ul>
-        </div>
-
-        <!-- INSPECTOR ACTIVITY -->
-        <div class="card">
-          <div class="ctitle">👤 Inspector Activity — Today</div>
-          <div class="ing" id="insp-grid">
-            <div class="loading"><span class="spin"></span>Loading…</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- HOURLY TREND -->
-      <div class="card">
-        <div class="ctitle">⏱ Hourly Trend — Today</div>
-        <div class="chart-wrap">
-          <canvas id="hourlyChart"></canvas>
-        </div>
-      </div>
-
-      <!-- LOCATION STATUS -->
-      <div class="card">
-        <div class="ctitle">🏫 Location Status</div>
-        <div id="loc-status" class="loc-grid">
-          <div class="loading"><span class="spin"></span>Loading…</div>
-        </div>
-      </div>
-
-      <!-- WEEKLY TREND -->
-      <div class="card">
-        <div class="ctitle">📅 Weekly Trend</div>
-        <div class="chart-wrap short">
-          <canvas id="weeklyChart"></canvas>
-        </div>
-      </div>
-
-      <!-- CHECKS BY LOCATION -->
-      <div class="card">
-        <div class="ctitle">📌 Checks by Location — Today</div>
-        <div id="by-location" class="loc-grid">
-          <div class="loading"><span class="spin"></span>Loading…</div>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="foot" id="foot">
-      Live data · Last refreshed: --
-    </footer>
-
-  </div>
-
-  <!-- Load Chart.js BEFORE dashboard JS -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- ===== JAVASCRIPT ===== -->
-  <script>
-/* ============================================================
-   GLOBAL DATA STORE
-   ============================================================ */
-let DATA = {};
-
-/* ⭐ YOUR REAL ENDPOINT ⭐ */
-const ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
-
-
-/* ============================================================
-   FETCH + NORMALIZE BACKEND DATA
-   ============================================================ */
-async function fetchData() {
-  const btn = document.getElementById("rbtn");
-  btn.disabled = true;
-  btn.textContent = "↻ Loading…";
-
-  try {
-    const res = await fetch(ENDPOINT);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    const raw = await res.json();
-    if (raw.error) throw new Error(raw.error);
-
-    const allIssuesRaw   = Array.isArray(raw.allIssues)   ? raw.allIssues   : [];
-    const locationStatus = raw.locationStatus             || {};
-    const inspectorCounts= raw.inspectorCounts            || {};
-    const hourly         = raw.hourly                     || {};
-    const byLocation     = raw.byLocation                 || {};
-    const daily          = Array.isArray(raw.daily)       ? raw.daily       : [];
-
-    DATA = {
-      todayCount:       raw.todayCount       ?? 0,
-      todayClear:       raw.todayClear       ?? 0,
-      todayIssues:      raw.todayIssues      ?? 0,
-      openIssueCount:   raw.openIssueCount   ?? 0,
-      locationsCovered: raw.locationsCovered ?? 0,
-      weekCount:        raw.weekCount        ?? 0,
-
-      locationStatus,
-      inspectorCounts,
-      hourly,
-      byLocation,
-      daily,
-
-      allIssues: allIssuesRaw.map(r => {
-        const ts = new Date(r.timestamp);
-        return {
-          location:   r.location,
-          inspector:  r.inspector,
-          timestamp:  ts,
-          time:       !isNaN(ts) ? ts.toTimeString().substring(0,5) : "",
-          issues:     Array.isArray(r.issues) ? r.issues : (r.issues ? [r.issues] : []),
-          photos:     Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-          sheetRow:   r.sheetRow,
-          resolved:   !!r.resolved,
-          hasIssue:   !!r.hasIssue
-        };
-      })
-    };
-
-    renderAll();
-
-    document.getElementById("foot").textContent =
-      "Live data · Last refreshed: " +
-      new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit"
-      });
-
-  } catch (err) {
-    console.error(err);
-    document.getElementById("foot").textContent =
-      "⚠️ Could not reach endpoint. (" + err.message + ")";
-  }
-
-  btn.disabled = false;
-  btn.textContent = "↻ Refresh";
-}
-
-
-/* ============================================================
-   RENDER ALL
-   ============================================================ */
-function renderAll() {
-  renderSummary();
-  renderOpenIssues();
-  renderInspectorGrid();
-  renderLocationStatus();
-  renderHourlyChart();
-  renderWeeklyChart();
-  renderByLocation();
-}
-
-
-/* ============================================================
-   SUMMARY CARDS
-   ============================================================ */
-function renderSummary() {
-  document.getElementById("loc-today").textContent     = DATA.locationsCovered;
-  document.getElementById("checks-today").textContent  = DATA.todayCount;
-  document.getElementById("issues-today").textContent  = DATA.todayIssues;
-  document.getElementById("resolved-today").textContent= DATA.todayClear;
-}
-
-
-/* ============================================================
-   OPEN ISSUES
-   ============================================================ */
-function renderOpenIssues() {
-  const container = document.getElementById("open-issues");
-  container.innerHTML = "";
-
-  const open = DATA.allIssues.filter(r =>
-    !r.resolved &&
-    Array.isArray(r.issues) &&
-    r.issues.length > 0
-  );
-
-  if (open.length === 0) {
-    container.innerHTML = `<li class="none">No open issues 🎉</li>`;
-    return;
-  }
-
-  open.forEach(r => {
-    const li = document.createElement("li");
-    li.className = "iitem";
-
-    const dot = `<span class="idot"></span>`;
-    const loc = `<div class="iloc">${r.location}</div>`;
-    const issueText = `<div class="itype">${r.issues.join(", ")}</div>`;
-    const meta = `<div class="imeta">Reported by ${r.inspector} · ${r.time}</div>`;
-
-    const actions = `
-      <div class="iactions">
-        <button class="resolve-btn" onclick="resolveIssue(${r.sheetRow}, this)">✔ Resolve</button>
-      </div>
-    `;
-
-    li.innerHTML = `
-      ${dot}
-      <div>
-        ${loc}
-        ${issueText}
-        ${meta}
-      </div>
-      ${actions}
-    `;
-
-    container.appendChild(li);
-  });
-}
-
-
-/* ============================================================
-   RESOLVE ISSUE
-   ============================================================ */
-async function resolveIssue(row, btn) {
-  try {
-    btn.disabled = true;
-    btn.textContent = "…";
-
-    const res = await fetch(ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "resolve", row })
-    });
-
-    const out = await res.json();
-    if (!out.success) throw new Error(out.error || "Unknown error");
-
-    await fetchData();
-
-  } catch (err) {
-    console.error(err);
-    alert("Could not resolve issue: " + err.message);
-    btn.disabled = false;
-    btn.textContent = "✔ Resolve";
-  }
-}
-
-
-/* ============================================================
-   INSPECTOR GRID
-   ============================================================ */
-function renderInspectorGrid() {
-  const grid = document.getElementById("insp-grid");
-  grid.innerHTML = "";
-
-  const counts = DATA.inspectorCounts || {};
-  const names = Object.keys(counts);
-
-  if (names.length === 0) {
-    grid.innerHTML = `<div class="none">No data</div>`;
-    return;
-  }
-
-  names.forEach(name => {
-    const div = document.createElement("div");
-    div.className = "ing-item";
-    div.innerHTML = `
-      <div class="ing-name">${name}</div>
-      <div class="ing-count">${counts[name]}</div>
-    `;
-    grid.appendChild(div);
-  });
-}
-
-
-/* ============================================================
-   LOCATION STATUS — FULL RESTORED VERSION
-   ============================================================ */
-function renderLocationStatus() {
-  const grid = document.getElementById("loc-status");
-  grid.innerHTML = "";
-
-  const status = DATA.locationStatus || {};
-  const locs = Object.keys(status);
-
-  if (locs.length === 0) {
-    grid.innerHTML = `<div class="none">No data</div>`;
-    return;
-  }
-
-  const now = new Date();
-
-  locs.forEach(loc => {
-    const last = status[loc];
-
-    let cls = "ll";   // default = Not Checked
-    let badge = "";
-    let meta = "";
-
-    if (!last || !last.timestamp) {
-      cls = "ll";
-      badge = `<span class="lbadge bgx">⬜ Not Checked</span>`;
-      meta = `<span style="font-style:italic;color:#9ca3af">No inspection yet today</span>`;
-    } else {
-      const ts = new Date(last.timestamp);
-      const mins = last.minutesSince;
-
-      if (last.hasIssue) {
-        cls = "lr";
-        badge = `<span class="lbadge bgr">🔴 Issue Reported</span>`;
-      }
-      else if (mins > 180) {
-        cls = "sa";
-        badge = `<span class="lbadge bgx" style="background:#fef3c7;color:#b45309;">⚠️ Overdue</span>`;
-      }
-      else {
-        cls = "lg";
-        badge = `<span class="lbadge bgg">✅ All Clear</span>`;
-      }
-
-      meta = `
-        <span>🕐 ${last.time}</span>
-        <span>👤 ${last.inspector}</span>
-      `;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Facility Inspection</title>
+
+<style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+        padding: 0;
     }
 
-    grid.innerHTML += `
-      <div class="lcard ${cls}">
-        <div class="lname">${loc}</div>
-        ${badge}
-        <div class="lmeta">${meta}</div>
-      </div>
-    `;
-  });
+    header {
+        background: #001F3F;
+        color: white;
+        padding: 15px 20px;
+        font-size: 22px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    header a {
+        background: #FFDC00;
+        color: #001F3F;
+        padding: 8px 14px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: 25px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    label {
+        font-weight: 600;
+        margin-top: 15px;
+        display: block;
+    }
+
+    select, input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px;
+        margin-top: 20px;
+        font-size: 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-no-issues {
+        background: #2ECC40;
+        color: white;
+    }
+
+    .btn-issue {
+        background: #FF4136;
+        color: white;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .success-box {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .success-box h2 {
+        color: #2ECC40;
+        font-size: 28px;
+    }
+</style>
+
+<script>
+const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+
+/************************************************************
+ * SUBMIT "NO ISSUES"
+ ************************************************************/
+async function submitNoIssues() {
+    const inspector = document.getElementById("inspector").value;
+    const location = document.getElementById("location").value;
+
+    if (!inspector || !location) {
+        alert("Please select both Inspector and Location.");
+        return;
+    }
+
+    const payload = {
+        action: "logNoIssue",
+        inspector: inspector,
+        location: location
+    };
+
+    await fetch(BACKEND_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
+
+    document.getElementById("formSection").classList.add("hidden");
+    document.getElementById("successSection").classList.remove("hidden");
 }
 
+/************************************************************
+ * OPEN GOOGLE FORM FOR ISSUE FOUND
+ ************************************************************/
+function reportIssue() {
+    const inspector = document.getElementById("inspector").value;
+    const location = document.getElementById("location").value;
 
-/* ============================================================
-   HOURLY CHART
-   ============================================================ */
-let hourlyChart;
-function renderHourlyChart() {
-  const ctx = document.getElementById("hourlyChart").getContext("2d");
-  const hours = Object.keys(DATA.hourly || {});
-  const values = Object.values(DATA.hourly || {});
+    if (!inspector || !location) {
+        alert("Please select both Inspector and Location.");
+        return;
+    }
 
-  if (hourlyChart) hourlyChart.destroy();
+    const formURL =
+      "https://docs.google.com/forms/d/e/1FAIpQLScp8u1x0YqYpYg7wHkRkV4xg5xV2r0tZq7uQ2xk9p3Y2u7QxA/viewform" +
+      `?usp=pp_url&entry.1111111111=${encodeURIComponent(inspector)}` +
+      `&entry.2222222222=${encodeURIComponent(location)}`;
 
-  hourlyChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: hours,
-      datasets: [{
-        label: "Checks",
-        data: values,
-        borderColor: "#1e40af",
-        backgroundColor: "rgba(30,64,175,0.2)",
-        tension: 0.3
-      }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+    window.location.href = formURL;
 }
+</script>
 
+</head>
+<body>
 
-/* ============================================================
-   WEEKLY CHART
-   ============================================================ */
-let weeklyChart;
-function renderWeeklyChart() {
-  const ctx = document.getElementById("weeklyChart").getContext("2d");
-  const days = DATA.daily.map(d => d.date);
-  const values = DATA.daily.map(d => d.count);
+<header>
+    Facility Inspection
+    <a href="dashboard.html">View Dashboard</a>
+</header>
 
-  if (weeklyChart) weeklyChart.destroy();
+<div class="container" id="formSection">
 
-  weeklyChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: days,
-      datasets: [{
-        label: "Checks",
-        data: values,
-        backgroundColor: "#0ea5e9"
-      }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-}
+    <label for="inspector">Inspector</label>
+    <select id="inspector">
+        <option value="">Select Inspector</option>
+        <option>Ken</option>
+        <option>Corey</option>
+        <option>Christie</option>
+        <option>Other</option>
+    </select>
 
+    <label for="location">Location / Area</label>
+    <select id="location">
+        <option value="">Select Location</option>
+        <option>Cafeteria</option>
+        <option>3rd Floor</option>
+        <option>Gym</option>
+        <option>Hallway A</option>
+        <option>Hallway B</option>
+        <option>Restroom 1</option>
+        <option>Restroom 2</option>
+        <option>Outside Grounds</option>
+    </select>
 
-/* ============================================================
-   BY LOCATION GRID
-   ============================================================ */
-function renderByLocation() {
-  const grid = document.getElementById("by-location");
-  grid.innerHTML = "";
+    <button class="btn btn-no-issues" onclick="submitNoIssues()">No Issues</button>
+    <button class="btn btn-issue" onclick="reportIssue()">Issue Found</button>
 
-  const data = DATA.byLocation || {};
-  const locs = Object.keys(data);
+</div>
 
-  if (locs.length === 0) {
-    grid.innerHTML = `<div class="none">No data</div>`;
-    return;
-  }
-
-  locs.forEach(loc => {
-    const div = document.createElement("div");
-    div.className = "locbox";
-    div.innerHTML = `
-      <div class="locname">${loc}</div>
-      <div class="locnum">${data[loc]}</div>
-    `;
-    grid.appendChild(div);
-  });
-}
-
-
-/* ============================================================
-   INITIAL LOAD
-   ============================================================ */
-fetchData();
-  </script>
+<div class="container hidden" id="successSection">
+    <div class="success-box">
+        <h2>Inspection Logged!</h2>
+        <p>Your “No Issues” inspection has been recorded.</p>
+        <button class="btn btn-no-issues" onclick="location.reload()">Submit Another</button>
+    </div>
+</div>
 
 </body>
 </html>
