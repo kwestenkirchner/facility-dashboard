@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspection Panel</title>
+
+<style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        background: #001F3F;
+        color: white;
+        padding: 18px;
+        text-align: center;
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    .container {
+        padding: 20px;
+        max-width: 600px;
+        margin: auto;
+    }
+
+    .card {
+        background: white;
+        padding: 18px;
+        margin-bottom: 18px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .location-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+
+    .no-issues {
+        background: #B3001B;
+        color: white;
+    }
+
+    .issue-found {
+        background: white;
+        border: 2px solid #001F3F;
+        color: #001F3F;
+    }
+
+    #inspectorSelectCard {
+        background: white;
+        padding: 20px;
+        margin: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    select {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 6px;
+        margin-top: 10px;
+    }
+
+    #saveInspector {
+        margin-top: 15px;
+        width: 100%;
+        padding: 14px;
+        background: #001F3F;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+</style>
+
+<script>
+    const ISSUE_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
+
+    const ENTRY_ISSUE = "entry.173778779";
+    const ENTRY_COMMENTS = "entry.1237607443";
+    const ENTRY_PHOTO = "entry.1090705986";
+
+    const LOCATIONS = [
+        "3rd Floor Restroom",
+        "2nd Floor Restroom",
+        "Cafeteria Men's Restroom",
+        "Auxiliary Locker Room – South"
+    ];
+
+    function buildIssueLink(location, inspector) {
+        return `${ISSUE_FORM_BASE}&${ENTRY_ISSUE}=&${ENTRY_COMMENTS}=&${ENTRY_PHOTO}=&entry.inspector=${encodeURIComponent(inspector)}&entry.location=${encodeURIComponent(location)}`;
+    }
+
+    function logNoIssues(location) {
+        const inspector = localStorage.getItem("inspectorName");
+        fetch("YOUR_APPS_SCRIPT_URL/logNoIssue", {
+            method: "POST",
+            body: JSON.stringify({ location, inspector })
+        }).then(() => {
+            alert("Logged successfully");
+        });
+    }
+
+    function saveInspector() {
+        const name = document.getElementById("inspectorSelect").value;
+        localStorage.setItem("inspectorName", name);
+        document.getElementById("inspectorSelectCard").style.display = "none";
+        document.getElementById("mainPanel").style.display = "block";
+    }
+
+    window.onload = () => {
+        const inspector = localStorage.getItem("inspectorName");
+        if (!inspector) {
+            document.getElementById("inspectorSelectCard").style.display = "block";
+            document.getElementById("mainPanel").style.display = "none";
+        }
+    };
+</script>
+
+</head>
+<body>
+
+<header>Inspection Panel</header>
+
+<div id="inspectorSelectCard">
+    <h3>Select Inspector</h3>
+    <select id="inspectorSelect">
+        <option>Ken</option>
+        <option>Mike</option>
+        <option>Sarah</option>
+        <option>John</option>
+    </select>
+    <button id="saveInspector" onclick="saveInspector()">Save</button>
+</div>
+
+<div id="mainPanel" class="container">
+
+    <!-- Locations -->
+    <script>
+        document.write(
+            LOCATIONS.map(loc => `
+                <div class="card">
+                    <div class="location-title">${loc}</div>
+                    <div class="btn-row">
+                        <button class="btn no-issues" onclick="logNoIssues('${loc}')">No Issues</button>
+                        <button class="btn issue-found" onclick="window.location.href = buildIssueLink('${loc}', localStorage.getItem('inspectorName'))">Issue Found</button>
+                    </div>
+                </div>
+            `).join("")
+        );
+    </script>
+
+</div>
+
+</body>
+</html>
