@@ -24,8 +24,12 @@
         --field-border: rgba(255,255,255,0.2);
     }
 
+    * {
+        box-sizing: border-box;
+    }
+
     body {
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
         background: var(--bg);
         color: var(--text);
         margin: 0;
@@ -36,7 +40,7 @@
     header {
         background: #001F3F;
         color: white;
-        padding: 16px;
+        padding: 16px 20px;
         font-size: 22px;
         font-weight: 600;
         display: flex;
@@ -46,35 +50,70 @@
 
     .toggle {
         cursor: pointer;
-        font-size: 16px;
+        font-size: 14px;
         background: var(--accent);
         color: #001F3F;
         padding: 6px 12px;
         border-radius: 6px;
         font-weight: 600;
+        white-space: nowrap;
     }
 
-    .container {
-        padding: 20px;
-        max-width: 600px;
-        margin: auto;
+    .layout {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 16px 16px 80px;
+        display: grid;
+        grid-template-columns: 2fr 1.2fr;
+        gap: 24px;
+    }
+
+    .card {
+        background: var(--card);
+        border-radius: 14px;
+        padding: 18px 18px 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+        font-size: 13px;
+        opacity: 0.8;
+        margin-bottom: 16px;
     }
 
     label {
         font-weight: 600;
-        margin-top: 20px;
+        margin-top: 14px;
         display: block;
+        font-size: 14px;
     }
 
-    select {
+    select, textarea, input[type="text"] {
         width: 100%;
-        padding: 14px;
-        margin-top: 8px;
+        padding: 12px;
+        margin-top: 6px;
         border-radius: 8px;
         border: 1px solid var(--field-border);
         background: var(--field-bg);
         color: var(--text);
-        font-size: 18px;
+        font-size: 15px;
+    }
+
+    textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    .hint {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 4px;
     }
 
     .sticky-bar {
@@ -83,45 +122,85 @@
         left: 0;
         right: 0;
         background: var(--card);
-        padding: 12px;
+        padding: 10px 12px;
         display: flex;
         gap: 10px;
-        box-shadow: 0 -2px 6px rgba(0,0,0,0.2);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
     }
 
     .btn {
         flex: 1;
-        padding: 16px;
-        font-size: 18px;
+        padding: 14px;
+        font-size: 16px;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: 600;
         color: white;
         cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
     }
 
-    .green { background: #2ECC40; }
-    .red { background: #FF4136; }
+    .btn.green { background: #2ECC40; }
+    .btn.red { background: #FF4136; }
+
+    .btn:hover {
+        opacity: 0.95;
+        transform: translateY(-1px);
+    }
+
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    .summary-list {
+        font-size: 13px;
+        opacity: 0.85;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+
+    @media (max-width: 900px) {
+        .layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 600px) {
+        header {
+            font-size: 18px;
+        }
+        .sticky-bar {
+            padding-bottom: 14px;
+        }
+        .btn {
+            font-size: 15px;
+        }
+    }
 </style>
 
 <script>
 function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
-
     const toggle = document.getElementById("themeToggle");
-    toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
+    if (toggle) {
+        toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
+    }
 }
-
-window.onload = () => {
-    const saved = localStorage.getItem("theme") || "light";
-    applyTheme(saved);
-};
 
 function toggleTheme() {
-    const current = document.documentElement.getAttribute("data-theme");
-    applyTheme(current === "dark" ? "light" : "dark");
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    applyTheme(current === "dark" ? "light" : "light" ? "dark" : "light");
 }
+
+window.addEventListener("load", () => {
+    const saved = localStorage.getItem("theme") || "light";
+    applyTheme(saved);
+});
 
 const BACKEND_URL =
   "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
@@ -129,6 +208,7 @@ const BACKEND_URL =
 async function submitNoIssues() {
     const inspector = document.getElementById("inspector").value;
     const location = document.getElementById("location").value;
+    const notes = document.getElementById("notes").value.trim();
 
     if (!inspector || !location) {
         alert("Please select both Inspector and Location.");
@@ -136,38 +216,50 @@ async function submitNoIssues() {
     }
 
     const payload = {
-        action: "logNoIssue",
+        action: "logInspection",
+        type: "No Issues Found",
         inspector,
-        location
+        location,
+        description: notes || "No Issues Found",
+        photos: false,
+        status: "Resolved"
     };
 
-    await fetch(BACKEND_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-    });
-
-    alert("No Issues logged successfully.");
-    location.reload();
+    try {
+        await fetch(BACKEND_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        alert("No Issues Found inspection logged successfully.");
+        location.reload();
+    } catch (e) {
+        alert("There was a problem submitting. Please try again.");
+    }
 }
 
 function reportIssue() {
     const inspector = document.getElementById("inspector").value;
     const location = document.getElementById("location").value;
+    const notes = document.getElementById("notes").value.trim();
 
     if (!inspector || !location) {
         alert("Please select both Inspector and Location.");
         return;
     }
 
-    const formURL =
-      "https://docs.google.com/forms/d/e/1FAIpQLScp8u1x0YqYpYg7wHkRkV4xg5xV2r0tZq7uQ2xk9p3Y2u7QxA/viewform" +
-      `?usp=pp_url&entry.1111111111=${encodeURIComponent(inspector)}` +
-      `&entry.2222222222=${encodeURIComponent(location)}`;
+    const baseFormURL =
+      "https://docs.google.com/forms/d/e/1FAIpQLScp8u1x0YqYpYg7wHkRkV4xg5xV2r0tZq7uQ2xk9p3Y2u7QxA/viewform";
 
-    window.location.href = formURL;
+    const url =
+      baseFormURL +
+      "?usp=pp_url" +
+      "&entry.1111111111=" + encodeURIComponent(inspector) +
+      "&entry.2222222222=" + encodeURIComponent(location) +
+      "&entry.3333333333=" + encodeURIComponent(notes);
+
+    window.location.href = url;
 }
 </script>
-
 </head>
 <body>
 
@@ -176,32 +268,64 @@ function reportIssue() {
     <div id="themeToggle" class="toggle" onclick="toggleTheme()">Dark Mode 🌙</div>
 </header>
 
-<div class="container">
-    <label>Inspector</label>
-    <select id="inspector">
-        <option value="">Select Inspector</option>
-        <option>Ken</option>
-        <option>Corey</option>
-        <option>Christie</option>
-        <option>Other</option>
-    </select>
+<div class="layout">
+    <div class="card">
+        <div class="card-title">New Inspection</div>
+        <div class="card-subtitle">
+            Choose your name and location, then log either “No Issues Found” or “Issue Found”.
+        </div>
 
-    <label>Location</label>
-    <select id="location">
-        <option value="">Select Location</option>
-        <option>Cafeteria</option>
-        <option>3rd Floor</option>
-        <option>Gym</option>
-        <option>Hallway A</option>
-        <option>Hallway B</option>
-        <option>Restroom 1</option>
-        <option>Restroom 2</option>
-        <option>Outside Grounds</option>
-    </select>
+        <label for="inspector">Inspector</label>
+        <select id="inspector">
+            <option value="">Select Inspector</option>
+            <option>Ken Westenkirchner</option>
+            <option>Corey</option>
+            <option>Christie</option>
+            <option>Other</option>
+        </select>
+
+        <label for="location">Location</label>
+        <select id="location">
+            <option value="">Select Location</option>
+            <option>Cafeteria Mens Restroom</option>
+            <option>Cafeteria Womens Restroom</option>
+            <option>Cafeteria</option>
+            <option>Gym</option>
+            <option>Hallway A</option>
+            <option>Hallway B</option>
+            <option>Restroom 1</option>
+            <option>Restroom 2</option>
+            <option>Outside Grounds</option>
+        </select>
+
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" placeholder="Add quick notes about cleanliness, supplies, or anything notable."></textarea>
+        <div class="hint">
+            For “Issue Found”, you’ll be able to add full details and photos on the Google Form.
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Quick Summary</div>
+        <div class="card-subtitle">
+            This inspection will be logged to your live dashboard.
+        </div>
+        <div class="summary-list">
+            <div class="summary-row">
+                <span>Type:</span><span>Issue Found / No Issues Found</span>
+            </div>
+            <div class="summary-row">
+                <span>Destination:</span><span>Google Sheet + Dashboard</span>
+            </div>
+            <div class="summary-row">
+                <span>Photos:</span><span>Captured via Google Form (Issue Found)</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="sticky-bar">
-    <button class="btn green" onclick="submitNoIssues()">No Issues</button>
+    <button class="btn green" onclick="submitNoIssues()">No Issues Found</button>
     <button class="btn red" onclick="reportIssue()">Issue Found</button>
 </div>
 
