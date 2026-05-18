@@ -6,17 +6,37 @@
 <title>Facility Inspection</title>
 
 <style>
+    :root {
+        --bg: #f4f6f9;
+        --text: #001F3F;
+        --card: #ffffff;
+        --button-bg: #001F3F;
+        --button-text: #ffffff;
+        --accent: #FFDC00;
+    }
+
+    [data-theme="dark"] {
+        --bg: #00152A;
+        --text: #ffffff;
+        --card: #0A2A4A;
+        --button-bg: #FFDC00;
+        --button-text: #001F3F;
+        --accent: #FFDC00;
+    }
+
     body {
         font-family: "Segoe UI", sans-serif;
-        background: #f4f6f9;
+        background: var(--bg);
+        color: var(--text);
         margin: 0;
         padding: 0;
+        transition: background 0.3s, color 0.3s;
     }
 
     header {
         background: #001F3F;
         color: white;
-        padding: 15px 20px;
+        padding: 16px;
         font-size: 22px;
         font-weight: 600;
         display: flex;
@@ -24,124 +44,59 @@
         align-items: center;
     }
 
-    header a {
-        background: #FFDC00;
+    .toggle {
+        cursor: pointer;
+        font-size: 16px;
+        background: var(--accent);
         color: #001F3F;
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-radius: 6px;
-        text-decoration: none;
         font-weight: 600;
     }
 
     .container {
-        max-width: 600px;
-        margin: 25px auto;
-        background: white;
+        max-width: 500px;
+        margin: 40px auto;
         padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    label {
-        font-weight: 600;
-        margin-top: 15px;
-        display: block;
-    }
-
-    select, input[type="text"] {
-        width: 100%;
-        padding: 10px;
-        margin-top: 6px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        font-size: 16px;
+        text-align: center;
     }
 
     .btn {
         width: 100%;
-        padding: 14px;
-        margin-top: 20px;
-        font-size: 18px;
+        padding: 18px;
+        margin: 15px 0;
+        font-size: 20px;
         border: none;
-        border-radius: 6px;
+        border-radius: 10px;
         cursor: pointer;
+        background: var(--button-bg);
+        color: var(--button-text);
         font-weight: 600;
+        transition: opacity 0.2s;
     }
 
-    .btn-no-issues {
-        background: #2ECC40;
-        color: white;
-    }
-
-    .btn-issue {
-        background: #FF4136;
-        color: white;
-    }
-
-    .hidden {
-        display: none;
-    }
-
-    .success-box {
-        text-align: center;
-        padding: 40px 20px;
-    }
-
-    .success-box h2 {
-        color: #2ECC40;
-        font-size: 28px;
+    .btn:hover {
+        opacity: 0.9;
     }
 </style>
 
 <script>
-const BACKEND_URL =
-  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
 
-/************************************************************
- * SUBMIT "NO ISSUES"
- ************************************************************/
-async function submitNoIssues() {
-    const inspector = document.getElementById("inspector").value;
-    const location = document.getElementById("location").value;
-
-    if (!inspector || !location) {
-        alert("Please select both Inspector and Location.");
-        return;
-    }
-
-    const payload = {
-        action: "logNoIssue",
-        inspector: inspector,
-        location: location
-    };
-
-    await fetch(BACKEND_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-    });
-
-    document.getElementById("formSection").classList.add("hidden");
-    document.getElementById("successSection").classList.remove("hidden");
+    const toggle = document.getElementById("themeToggle");
+    toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
 }
 
-/************************************************************
- * OPEN GOOGLE FORM FOR ISSUE FOUND
- ************************************************************/
-function reportIssue() {
-    const inspector = document.getElementById("inspector").value;
-    const location = document.getElementById("location").value;
+window.onload = () => {
+    const saved = localStorage.getItem("theme") || "light";
+    applyTheme(saved);
+};
 
-    if (!inspector || !location) {
-        alert("Please select both Inspector and Location.");
-        return;
-    }
-
-    const formURL =
-      "https://docs.google.com/forms/d/e/1FAIpQLScp8u1x0YqYpYg7wHkRkV4xg5xV2r0tZq7uQ2xk9p3Y2u7QxA/viewform" +
-      `?usp=pp_url&entry.1111111111=${encodeURIComponent(inspector)}` +
-      `&entry.2222222222=${encodeURIComponent(location)}`;
-
-    window.location.href = formURL;
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
 }
 </script>
 
@@ -150,44 +105,12 @@ function reportIssue() {
 
 <header>
     Facility Inspection
-    <a href="dashboard.html">View Dashboard</a>
+    <div id="themeToggle" class="toggle" onclick="toggleTheme()">Dark Mode 🌙</div>
 </header>
 
-<div class="container" id="formSection">
-
-    <label for="inspector">Inspector</label>
-    <select id="inspector">
-        <option value="">Select Inspector</option>
-        <option>Ken</option>
-        <option>Corey</option>
-        <option>Christie</option>
-        <option>Other</option>
-    </select>
-
-    <label for="location">Location / Area</label>
-    <select id="location">
-        <option value="">Select Location</option>
-        <option>Cafeteria</option>
-        <option>3rd Floor</option>
-        <option>Gym</option>
-        <option>Hallway A</option>
-        <option>Hallway B</option>
-        <option>Restroom 1</option>
-        <option>Restroom 2</option>
-        <option>Outside Grounds</option>
-    </select>
-
-    <button class="btn btn-no-issues" onclick="submitNoIssues()">No Issues</button>
-    <button class="btn btn-issue" onclick="reportIssue()">Issue Found</button>
-
-</div>
-
-<div class="container hidden" id="successSection">
-    <div class="success-box">
-        <h2>Inspection Logged!</h2>
-        <p>Your “No Issues” inspection has been recorded.</p>
-        <button class="btn btn-no-issues" onclick="location.reload()">Submit Another</button>
-    </div>
+<div class="container">
+    <button class="btn" onclick="location.href='inspect.html'">Start Inspection</button>
+    <button class="btn" onclick="location.href='dashboard.html'">View Dashboard</button>
 </div>
 
 </body>
