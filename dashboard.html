@@ -1,142 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Facilities Dashboard</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inspection Dashboard</title>
 
 <!-- Google Charts -->
 <script src="https://www.gstatic.com/charts/loader.js"></script>
 
 <style>
+    :root {
+        --bg: #f4f6f9;
+        --text: #001F3F;
+        --card: #ffffff;
+        --accent: #FFDC00;
+        --border: #ddd;
+    }
+
+    [data-theme="dark"] {
+        --bg: #00152A;
+        --text: #ffffff;
+        --card: #0A2A4A;
+        --accent: #FFDC00;
+        --border: rgba(255,255,255,0.2);
+    }
+
     body {
         font-family: "Segoe UI", sans-serif;
-        background: #f4f6f9;
+        background: var(--bg);
+        color: var(--text);
         margin: 0;
         padding: 0;
+        transition: background 0.3s, color 0.3s;
     }
 
     header {
         background: #001F3F;
         color: white;
-        padding: 20px;
-        text-align: center;
-        font-size: 26px;
+        padding: 16px;
+        font-size: 22px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .toggle {
+        cursor: pointer;
+        font-size: 16px;
+        background: var(--accent);
+        color: #001F3F;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-weight: 600;
     }
 
     .container {
-        max-width: 1200px;
-        margin: 20px auto;
-        padding: 10px;
+        padding: 15px;
+        max-width: 900px;
+        margin: auto;
     }
 
-    .cards {
+    .card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
     }
 
     .card {
-        background: white;
+        background: var(--card);
         padding: 18px;
         border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         text-align: center;
+        border: 1px solid var(--border);
     }
 
     .card h2 {
         margin: 0;
-        font-size: 36px;
-        color: #001F3F;
+        font-size: 32px;
     }
 
-    .card p {
-        margin: 8px 0 0;
-        font-size: 16px;
-        color: #555;
+    .section {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border);
     }
 
     .section-title {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 600;
-        margin: 25px 0 10px;
-        color: #001F3F;
-    }
-
-    .list {
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
 
     .issue-item {
         padding: 10px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border);
     }
 
     .issue-item:last-child {
         border-bottom: none;
     }
 
-    .open {
-        color: #dc3545;
-        font-weight: bold;
-    }
-
-    .resolved {
-        color: #28a745;
-        font-weight: bold;
-    }
+    .open { color: #FF4136; font-weight: 600; }
+    .resolved { color: #2ECC40; font-weight: 600; }
 
     .chart-box {
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        margin-bottom: 25px;
+        height: 320px;
+        margin-bottom: 20px;
+    }
+
+    .collapse-btn {
+        width: 100%;
+        text-align: left;
+        padding: 12px;
+        background: var(--accent);
+        color: #001F3F;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        cursor: pointer;
     }
 </style>
 
 <script>
-/************************************************************
- * CONFIG
- ************************************************************/
+/* ------------------------------
+   DARK MODE
+------------------------------ */
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+
+    const toggle = document.getElementById("themeToggle");
+    toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
+}
+
+window.onload = () => {
+    const saved = localStorage.getItem("theme") || "light";
+    applyTheme(saved);
+};
+
+/* ------------------------------
+   DATA LOADING
+------------------------------ */
 const BACKEND_URL =
   "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
 
-/************************************************************
- * LOAD DATA
- ************************************************************/
 async function loadData() {
     const res = await fetch(BACKEND_URL);
     const json = await res.json();
     return json.data || [];
 }
 
-/************************************************************
- * RENDER SUMMARY CARDS
- ************************************************************/
+/* ------------------------------
+   SUMMARY CARDS
+------------------------------ */
 function renderSummary(data) {
-    const total = data.length;
-    const open = data.filter(x => x.status === "Open").length;
-    const resolved = data.filter(x => x.status === "Resolved").length;
-    const issues = data.filter(x => x.type === "Issue Found").length;
-    const noIssues = data.filter(x => x.type === "No Issues").length;
-
-    document.getElementById("totalInspections").textContent = total;
-    document.getElementById("openIssues").textContent = open;
-    document.getElementById("resolvedIssues").textContent = resolved;
-    document.getElementById("issueFound").textContent = issues;
-    document.getElementById("noIssues").textContent = noIssues;
+    document.getElementById("totalInspections").textContent = data.length;
+    document.getElementById("openIssues").textContent = data.filter(x => x.status === "Open").length;
+    document.getElementById("resolvedIssues").textContent = data.filter(x => x.status === "Resolved").length;
+    document.getElementById("issueFound").textContent = data.filter(x => x.type === "Issue Found").length;
+    document.getElementById("noIssues").textContent = data.filter(x => x.type === "No Issues").length;
 }
 
-/************************************************************
- * RENDER OPEN & RESOLVED LISTS
- ************************************************************/
+/* ------------------------------
+   LISTS
+------------------------------ */
 function renderLists(data) {
     const openList = document.getElementById("openList");
     const resolvedList = document.getElementById("resolvedList");
@@ -161,14 +194,14 @@ function renderLists(data) {
     });
 }
 
-/************************************************************
- * LOCATION CHART
- ************************************************************/
+/* ------------------------------
+   CHARTS
+------------------------------ */
+google.charts.load("current", { packages: ["corechart"] });
+
 function drawLocationChart(data) {
     const counts = {};
-    data.forEach(x => {
-        counts[x.location] = (counts[x.location] || 0) + 1;
-    });
+    data.forEach(x => counts[x.location] = (counts[x.location] || 0) + 1);
 
     const rows = [["Location", "Inspections"]];
     Object.keys(counts).forEach(loc => rows.push([loc, counts[loc]]));
@@ -179,18 +212,13 @@ function drawLocationChart(data) {
     chart.draw(table, {
         title: "Inspections by Location",
         legend: "none",
-        colors: ["#001F3F"]
+        colors: ["#FFDC00"]
     });
 }
 
-/************************************************************
- * INSPECTOR CHART
- ************************************************************/
 function drawInspectorChart(data) {
     const counts = {};
-    data.forEach(x => {
-        counts[x.inspector] = (counts[x.inspector] || 0) + 1;
-    });
+    data.forEach(x => counts[x.inspector] = (counts[x.inspector] || 0) + 1);
 
     const rows = [["Inspector", "Inspections"]];
     Object.keys(counts).forEach(name => rows.push([name, counts[name]]));
@@ -201,16 +229,12 @@ function drawInspectorChart(data) {
     chart.draw(table, {
         title: "Inspections by Inspector",
         legend: "none",
-        colors: ["#0074D9"]
+        colors: ["#FFDC00"]
     });
 }
 
-/************************************************************
- * TIMELINE CHART
- ************************************************************/
 function drawTimelineChart(data) {
     const counts = {};
-
     data.forEach(x => {
         const day = x.timestamp.split(" ")[0];
         counts[day] = (counts[day] || 0) + 1;
@@ -225,16 +249,22 @@ function drawTimelineChart(data) {
     chart.draw(table, {
         title: "Inspections Over Time",
         legend: "none",
-        colors: ["#FF4136"]
+        colors: ["#FFDC00"]
     });
 }
 
-/************************************************************
- * MAIN
- ************************************************************/
-google.charts.load("current", { packages: ["corechart"] });
+/* ------------------------------
+   COLLAPSE SECTIONS
+------------------------------ */
+function toggleSection(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === "none" ? "block" : "none";
+}
 
-window.onload = async () => {
+/* ------------------------------
+   MAIN
+------------------------------ */
+window.addEventListener("load", async () => {
     const data = await loadData();
 
     renderSummary(data);
@@ -245,57 +275,47 @@ window.onload = async () => {
         drawInspectorChart(data);
         drawTimelineChart(data);
     });
-};
+});
 </script>
 
 </head>
 <body>
 
-<header>Facilities Inspection Dashboard</header>
+<header>
+    Dashboard
+    <div id="themeToggle" class="toggle" onclick="toggleTheme()">Dark Mode 🌙</div>
+</header>
 
 <div class="container">
 
     <!-- SUMMARY CARDS -->
-    <div class="cards">
-        <div class="card">
-            <h2 id="totalInspections">0</h2>
-            <p>Total Inspections</p>
-        </div>
-        <div class="card">
-            <h2 id="openIssues">0</h2>
-            <p>Open Issues</p>
-        </div>
-        <div class="card">
-            <h2 id="resolvedIssues">0</h2>
-            <p>Resolved Issues</p>
-        </div>
-        <div class="card">
-            <h2 id="issueFound">0</h2>
-            <p>Issue Found</p>
-        </div>
-        <div class="card">
-            <h2 id="noIssues">0</h2>
-            <p>No Issues</p>
-        </div>
+    <div class="card-grid">
+        <div class="card"><h2 id="totalInspections">0</h2><p>Total</p></div>
+        <div class="card"><h2 id="openIssues">0</h2><p>Open</p></div>
+        <div class="card"><h2 id="resolvedIssues">0</h2><p>Resolved</p></div>
+        <div class="card"><h2 id="issueFound">0</h2><p>Issues Found</p></div>
+        <div class="card"><h2 id="noIssues">0</h2><p>No Issues</p></div>
     </div>
 
     <!-- OPEN ISSUES -->
-    <div class="section-title">Open Issues</div>
-    <div id="openList" class="list"></div>
+    <button class="collapse-btn" onclick="toggleSection('openSection')">Open Issues</button>
+    <div id="openSection" class="section">
+        <div id="openList"></div>
+    </div>
 
     <!-- RESOLVED ISSUES -->
-    <div class="section-title">Resolved Issues</div>
-    <div id="resolvedList" class="list"></div>
+    <button class="collapse-btn" onclick="toggleSection('resolvedSection')">Resolved Issues</button>
+    <div id="resolvedSection" class="section">
+        <div id="resolvedList"></div>
+    </div>
 
     <!-- CHARTS -->
-    <div class="section-title">Location Breakdown</div>
-    <div id="locationChart" class="chart-box" style="height: 350px;"></div>
-
-    <div class="section-title">Inspector Breakdown</div>
-    <div id="inspectorChart" class="chart-box" style="height: 350px;"></div>
-
-    <div class="section-title">Inspection Timeline</div>
-    <div id="timelineChart" class="chart-box" style="height: 350px;"></div>
+    <button class="collapse-btn" onclick="toggleSection('chartsSection')">Charts</button>
+    <div id="chartsSection" class="section">
+        <div id="locationChart" class="chart-box"></div>
+        <div id="inspectorChart" class="chart-box"></div>
+        <div id="timelineChart" class="chart-box"></div>
+    </div>
 
 </div>
 
