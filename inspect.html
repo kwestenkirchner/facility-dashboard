@@ -10,20 +10,13 @@
         font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
-        background: var(--bg);
-        color: var(--text);
-    }
-
-    :root {
-        --bg: #ffffff;
-        --text: #000000;
-        --card: #f2f2f2;
+        background: #ffffff;
+        color: #000000;
     }
 
     .dark {
-        --bg: #1e1e1e;
-        --text: #ffffff;
-        --card: #2c2c2c;
+        background: #1e1e1e;
+        color: #ffffff;
     }
 
     header {
@@ -31,7 +24,11 @@
         justify-content: space-between;
         align-items: center;
         padding: 15px;
-        background: var(--card);
+        background: #f2f2f2;
+    }
+
+    .dark header {
+        background: #2c2c2c;
     }
 
     .container {
@@ -79,7 +76,8 @@
     <select id="inspector">
         <option value="">Select Inspector</option>
         <option value="Ken Westenkirchner">Ken Westenkirchner</option>
-        <option value="Christie Westenkirchner">Christie Westenkirchner</option>
+        <option value="Maintenance Staff">Maintenance Staff</option>
+        <option value="Custodial Staff">Custodial Staff</option>
     </select>
 
     <label>Location</label>
@@ -112,7 +110,7 @@
         document.body.classList.add("dark");
     }
 
-    // Corrected No Issue submission
+    // No Issues Found submission
     async function submitNoIssue() {
         const inspector = document.getElementById('inspector').value;
         const location = document.getElementById('location').value;
