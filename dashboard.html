@@ -1,593 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inspection Dashboard</title>
-
-<script src="https://www.gstatic.com/charts/loader.js"></script>
-
-<style>
-    :root {
-        --bg: #f4f6f9;
-        --text: #001F3F;
-        --card: #ffffff;
-        --accent: #FFDC00;
-        --border: #ddd;
-        --chip-bg: #e9edf5;
-    }
-
-    [data-theme="dark"] {
-        --bg: #00152A;
-        --text: #ffffff;
-        --card: #0A2A4A;
-        --accent: #FFDC00;
-        --border: rgba(255,255,255,0.2);
-        --chip-bg: rgba(255,255,255,0.08);
-    }
-
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        margin: 0;
-        padding: 0;
-        transition: background 0.3s, color 0.3s;
-    }
-
-    header {
-        background: #001F3F;
-        color: white;
-        padding: 16px 20px;
-        font-size: 22px;
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .toggle {
-        cursor: pointer;
-        font-size: 14px;
-        background: var(--accent);
-        color: #001F3F;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .layout {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 16px;
-    }
-
-    .filter-bar {
-        background: var(--card);
-        border-radius: 14px;
-        padding: 14px 16px 10px;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-        margin-bottom: 18px;
-        border: 1px solid var(--border);
-    }
-
-    .filter-row {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 10px;
-        align-items: end;
-    }
-
-    .filter-group label {
-        font-size: 12px;
-        font-weight: 600;
-        display: block;
-        margin-bottom: 4px;
-    }
-
-    .filter-group input,
-    .filter-group select {
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: var(--bg);
-        color: var(--text);
-        font-size: 13px;
-    }
-
-    .filter-actions {
-        margin-top: 10px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        font-size: 12px;
-    }
-
-    .filter-chip {
-        background: var(--chip-bg);
-        border-radius: 999px;
-        padding: 4px 10px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .filter-chip button {
-        border: none;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-size: 12px;
-    }
-
-    .card-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 10px;
-        margin-bottom: 18px;
-    }
-
-    .card {
-        background: var(--card);
-        padding: 14px 12px;
-        border-radius: 12px;
-        text-align: center;
-        border: 1px solid var(--border);
-    }
-
-    .card h2 {
-        margin: 0;
-        font-size: 24px;
-    }
-
-    .card p {
-        margin: 4px 0 0;
-        font-size: 12px;
-        opacity: 0.8;
-    }
-
-    .section {
-        background: var(--card);
-        padding: 14px 14px 6px;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        border: 1px solid var(--border);
-    }
-
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .section-title {
-        font-size: 16px;
-        font-weight: 600;
-    }
-
-    .collapse-btn {
-        border: none;
-        background: var(--chip-bg);
-        color: var(--text);
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 12px;
-        cursor: pointer;
-    }
-
-    .issue-item {
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border);
-        font-size: 13px;
-    }
-
-    .issue-item:last-child {
-        border-bottom: none;
-    }
-
-    .issue-meta {
-        font-size: 11px;
-        opacity: 0.8;
-    }
-
-    .open { color: #FF4136; font-weight: 600; }
-    .resolved { color: #2ECC40; font-weight: 600; }
-
-    .chart-box {
-        height: 280px;
-        margin-bottom: 10px;
-    }
-
-    @media (max-width: 1024px) {
-        .filter-row {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-        .card-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 768px) {
-        header {
-            font-size: 18px;
-        }
-        .filter-row {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .card-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 540px) {
-        .filter-row {
-            grid-template-columns: 1fr;
-        }
-        .card-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-    }
-</style>
-
-<script>
-function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-    const toggle = document.getElementById("themeToggle");
-    if (toggle) {
-        toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
-    }
-}
-
-function toggleTheme() {
-    const current = document.documentElement.getAttribute("data-theme") || "light";
-    applyTheme(current === "dark" ? "light" : "dark");
-}
-
-const BACKEND_URL =
-  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
-
-let allData = [];
-let filteredData = [];
-
-google.charts.load("current", { packages: ["corechart"] });
-
-async function loadData() {
-    const res = await fetch(BACKEND_URL);
-    const json = await res.json();
-    return json.data || json || [];
-}
-
-function normalizeRecord(r) {
-    return {
-        timestamp: r.timestamp,
-        inspector: r.inspector || "",
-        location: r.location || "",
-        type: r.type || "",
-        description: r.description || "",
-        photos: !!r.photos,
-        status: r.status || "",
-        resolvedBy: r.resolvedBy || "",
-        resolvedAt: r.resolvedAt || ""
-    };
-}
-
-function applyFilters() {
-    const start = document.getElementById("filterStart").value;
-    const end = document.getElementById("filterEnd").value;
-    const inspector = document.getElementById("filterInspector").value;
-    const location = document.getElementById("filterLocation").value;
-    const type = document.getElementById("filterType").value;
-    const status = document.getElementById("filterStatus").value;
-
-    filteredData = allData.filter(item => {
-        const d = item.timestamp ? item.timestamp.substring(0, 10) : "";
-        if (start && d < start) return false;
-        if (end && d > end) return false;
-        if (inspector && item.inspector !== inspector) return false;
-        if (location && item.location !== location) return false;
-        if (type && item.type !== type) return false;
-        if (status && item.status !== status) return false;
-        return true;
-    });
-
-    renderSummary(filteredData);
-    renderLists(filteredData);
-    drawCharts(filteredData);
-}
-
-function clearFilters() {
-    document.getElementById("filterStart").value = "";
-    document.getElementById("filterEnd").value = "";
-    document.getElementById("filterInspector").value = "";
-    document.getElementById("filterLocation").value = "";
-    document.getElementById("filterType").value = "";
-    document.getElementById("filterStatus").value = "";
-    applyFilters();
-}
-
-function renderSummary(data) {
-    document.getElementById("totalInspections").textContent = data.length;
-    document.getElementById("openIssues").textContent = data.filter(x => x.status === "Open").length;
-    document.getElementById("resolvedIssues").textContent = data.filter(x => x.status === "Resolved").length;
-    document.getElementById("issueFound").textContent = data.filter(x => x.type === "Issue Found").length;
-    document.getElementById("noIssues").textContent = data.filter(x => x.type === "No Issues Found").length;
-}
-
-function renderLists(data) {
-    const openList = document.getElementById("openList");
-    const resolvedList = document.getElementById("resolvedList");
-    openList.innerHTML = "";
-    resolvedList.innerHTML = "";
-
-    const sorted = [...data].sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
-
-    sorted.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "issue-item";
-
-        const statusClass = item.status === "Open" ? "open" : "resolved";
-        const statusLabel = item.status || "Unknown";
-
-        div.innerHTML = `
-            <strong>${item.location || "(No location)"}</strong><br>
-            ${item.description || "(No description)"}<br>
-            <span class="${statusClass}">${statusLabel}</span>
-            &nbsp;•&nbsp; ${item.type || "Unknown type"}
-            <div class="issue-meta">
-                ${item.inspector || "Unknown inspector"}
-                &nbsp;•&nbsp; ${item.timestamp || ""}
-                ${item.resolvedAt ? " &nbsp;•&nbsp; Resolved: " + item.resolvedAt : ""}
-            </div>
-        `;
-
-        if (item.status === "Open") openList.appendChild(div);
-        else resolvedList.appendChild(div);
-    });
-}
-
-function drawLocationChart(data) {
-    const counts = {};
-    data.forEach(x => {
-        const key = x.location || "Unknown";
-        counts[key] = (counts[key] || 0) + 1;
-    });
-
-    const rows = [["Location", "Inspections"]];
-    Object.keys(counts).forEach(loc => rows.push([loc, counts[loc]]));
-
-    const table = google.visualization.arrayToDataTable(rows);
-    const chart = new google.visualization.ColumnChart(document.getElementById("locationChart"));
-
-    chart.draw(table, {
-        title: "Inspections by Location",
-        legend: "none",
-        colors: ["#FFDC00"],
-        backgroundColor: "transparent",
-        hAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        vAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        titleTextStyle: { color: getComputedStyle(document.body).color }
-    });
-}
-
-function drawInspectorChart(data) {
-    const counts = {};
-    data.forEach(x => {
-        const key = x.inspector || "Unknown";
-        counts[key] = (counts[key] || 0) + 1;
-    });
-
-    const rows = [["Inspector", "Inspections"]];
-    Object.keys(counts).forEach(name => rows.push([name, counts[name]]));
-
-    const table = google.visualization.arrayToDataTable(rows);
-    const chart = new google.visualization.BarChart(document.getElementById("inspectorChart"));
-
-    chart.draw(table, {
-        title: "Inspections by Inspector",
-        legend: "none",
-        colors: ["#FFDC00"],
-        backgroundColor: "transparent",
-        hAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        vAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        titleTextStyle: { color: getComputedStyle(document.body).color }
-    });
-}
-
-function drawTimelineChart(data) {
-    const counts = {};
-    data.forEach(x => {
-        if (!x.timestamp) return;
-        const day = x.timestamp.substring(0, 10);
-        counts[day] = (counts[day] || 0) + 1;
-    });
-
-    const rows = [["Date", "Inspections"]];
-    Object.keys(counts).sort().forEach(day => rows.push([day, counts[day]]));
-
-    const table = google.visualization.arrayToDataTable(rows);
-    const chart = new google.visualization.LineChart(document.getElementById("timelineChart"));
-
-    chart.draw(table, {
-        title: "Inspections Over Time",
-        legend: "none",
-        colors: ["#FFDC00"],
-        backgroundColor: "transparent",
-        hAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        vAxis: { textStyle: { color: getComputedStyle(document.body).color } },
-        titleTextStyle: { color: getComputedStyle(document.body).color }
-    });
-}
-
-function drawCharts(data) {
-    google.charts.setOnLoadCallback(() => {
-        drawLocationChart(data);
-        drawInspectorChart(data);
-        drawTimelineChart(data);
-    });
-}
-
-function toggleSection(id) {
-    const el = document.getElementById(id);
-    el.style.display = el.style.display === "none" ? "block" : "none";
-}
-
-function populateFilterOptions(data) {
-    const inspectorSelect = document.getElementById("filterInspector");
-    const locationSelect = document.getElementById("filterLocation");
-
-    const inspectors = Array.from(new Set(data.map(d => d.inspector).filter(Boolean))).sort();
-    const locations = Array.from(new Set(data.map(d => d.location).filter(Boolean))).sort();
-
-    inspectors.forEach(name => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        inspectorSelect.appendChild(opt);
-    });
-
-    locations.forEach(loc => {
-        const opt = document.createElement("option");
-        opt.value = loc;
-        opt.textContent = loc;
-        locationSelect.appendChild(opt);
-    });
-}
-
-window.addEventListener("load", async () => {
-    const saved = localStorage.getItem("theme") || "light";
-    applyTheme(saved);
-
-    const raw = await loadData();
-    allData = raw.map(normalizeRecord);
-    filteredData = [...allData];
-
-    populateFilterOptions(allData);
-    renderSummary(filteredData);
-    renderLists(filteredData);
-    drawCharts(filteredData);
-});
-</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspection Dashboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header>
-    Inspection Dashboard
-    <div id="themeToggle" class="toggle" onclick="toggleTheme()">Dark Mode 🌙</div>
-</header>
+    <!-- HEADER -->
+    <header class="header">
+        <h1>Inspection Dashboard</h1>
+    </header>
 
-<div class="layout">
+    <!-- MAIN CONTENT -->
+    <main class="container">
 
-    <div class="filter-bar">
-        <div class="filter-row">
-            <div class="filter-group">
-                <label for="filterStart">Start Date</label>
-                <input type="date" id="filterStart" onchange="applyFilters()" />
+        <!-- TOP CARD GRID -->
+        <section class="card-grid">
+
+            <div class="card card-blue">
+                <h2>Total Inspections</h2>
+                <p id="totalInspections">0</p>
             </div>
-            <div class="filter-group">
-                <label for="filterEnd">End Date</label>
-                <input type="date" id="filterEnd" onchange="applyFilters()" />
+
+            <div class="card card-red">
+                <h2>Open Issues</h2>
+                <p id="openIssues">0</p>
             </div>
-            <div class="filter-group">
-                <label for="filterInspector">Inspector</label>
-                <select id="filterInspector" onchange="applyFilters()">
-                    <option value="">All Inspectors</option>
-                </select>
+
+            <div class="card card-green">
+                <h2>Resolved</h2>
+                <p id="resolvedIssues">0</p>
             </div>
-            <div class="filter-group">
-                <label for="filterLocation">Location</label>
-                <select id="filterLocation" onchange="applyFilters()">
-                    <option value="">All Locations</option>
-                </select>
+
+            <div class="card card-gray">
+                <h2>No Issues Found</h2>
+                <p id="noIssues">0</p>
             </div>
-            <div class="filter-group">
-                <label for="filterType">Type</label>
-                <select id="filterType" onchange="applyFilters()">
-                    <option value="">All Types</option>
-                    <option value="Issue Found">Issue Found</option>
-                    <option value="No Issues Found">No Issues Found</option>
-                </select>
-            </div>
-        </div>
 
-        <div class="filter-row" style="margin-top:10px;">
-            <div class="filter-group">
-                <label for="filterStatus">Status</label>
-                <select id="filterStatus" onchange="applyFilters()">
-                    <option value="">All Statuses</option>
-                    <option value="Open">Open</option>
-                    <option value="Resolved">Resolved</option>
-                </select>
-            </div>
-        </div>
+        </section>
 
-        <div class="filter-actions">
-            <div class="filter-chip">
-                Active Filters
-                <button onclick="clearFilters()">Clear All ✕</button>
-            </div>
-        </div>
-    </div>
+        <!-- TABLE OF RECENT INSPECTIONS -->
+        <section class="table-section">
+            <h2>Recent Inspections</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Inspector</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="inspectionTableBody">
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </section>
 
-    <div class="card-grid">
-        <div class="card">
-            <h2 id="totalInspections">0</h2>
-            <p>Total</p>
-        </div>
-        <div class="card">
-            <h2 id="openIssues">0</h2>
-            <p>Open</p>
-        </div>
-        <div class="card">
-            <h2 id="resolvedIssues">0</h2>
-            <p>Resolved</p>
-        </div>
-        <div class="card">
-            <h2 id="issueFound">0</h2>
-            <p>Issue Found</p>
-        </div>
-        <div class="card">
-            <h2 id="noIssues">0</h2>
-            <p>No Issues Found</p>
-        </div>
-    </div>
+    </main>
 
-    <div id="openSection" class="section">
-        <div class="section-header">
-            <div class="section-title">Open Issues</div>
-            <button class="collapse-btn" onclick="toggleSection('openList')">Toggle</button>
-        </div>
-        <div id="openList"></div>
-    </div>
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>SF Knights Facilities • Inspection Dashboard</p>
+    </footer>
 
-    <div id="resolvedSection" class="section">
-        <div class="section-header">
-            <div class="section-title">Resolved Issues</div>
-            <button class="collapse-btn" onclick="toggleSection('resolvedList')">Toggle</button>
-        </div>
-        <div id="resolvedList"></div>
-    </div>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
 
-    <div id="chartsSection" class="section">
-        <div class="section-header">
-            <div class="section-title">Charts</div>
-            <button class="collapse-btn" onclick="toggleSection('chartsBody')">Toggle</button>
-        </div>
-        <div id="chartsBody">
-            <div id="locationChart" class="chart-box"></div>
-            <div id="inspectorChart" class="chart-box"></div>
-            <div id="timelineChart" class="chart-box"></div>
-        </div>
-    </div>
+async function loadDashboard() {
+    try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
 
-</div>
+        // Update counts
+        document.getElementById("totalInspections").textContent = data.length;
+
+        const open = data.filter(x => x.status === "Open").length;
+        const resolved = data.filter(x => x.status === "Resolved").length;
+        const noIssues = data.filter(x => x.type === "No Issues Found").length;
+
+        document.getElementById("openIssues").textContent = open;
+        document.getElementById("resolvedIssues").textContent = resolved;
+        document.getElementById("noIssues").textContent = noIssues;
+
+        // Fill table
+        const tbody = document.getElementById("inspectionTableBody");
+        tbody.innerHTML = "";
+
+        data.slice().reverse().forEach(item => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${item.timestamp || ""}</td>
+                <td>${item.inspector || ""}</td>
+                <td>${item.location || ""}</td>
+                <td>${item.status || item.type || ""}</td>
+                <td>${item.notes || ""}</td>
+            `;
+
+            tbody.appendChild(row);
+        });
+
+    } catch (err) {
+        console.error("Error loading dashboard:", err);
+    }
+}
+
+loadDashboard();
+</script>
 
 </body>
 </html>
