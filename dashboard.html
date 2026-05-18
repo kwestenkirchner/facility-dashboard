@@ -5,109 +5,253 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inspection Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-    <!-- HEADER -->
-    <header class="header">
-        <h1>Inspection Dashboard</h1>
-    </header>
+<header class="header">
+    <h1>Inspection Dashboard</h1>
+</header>
 
-    <!-- MAIN CONTENT -->
-    <main class="container">
+<main class="container">
 
-        <!-- TOP CARD GRID -->
-        <section class="card-grid">
+    <!-- SUMMARY CARDS -->
+    <section class="card-grid">
+        <div class="card card-blue">
+            <h2>Total Inspections</h2>
+            <p id="totalInspections">0</p>
+        </div>
 
-            <div class="card card-blue">
-                <h2>Total Inspections</h2>
-                <p id="totalInspections">0</p>
-            </div>
+        <div class="card card-red">
+            <h2>Open Issues</h2>
+            <p id="openIssues">0</p>
+        </div>
 
-            <div class="card card-red">
-                <h2>Open Issues</h2>
-                <p id="openIssues">0</p>
-            </div>
+        <div class="card card-green">
+            <h2>Resolved</h2>
+            <p id="resolvedCount">0</p>
+        </div>
 
-            <div class="card card-green">
-                <h2>Resolved</h2>
-                <p id="resolvedIssues">0</p>
-            </div>
+        <div class="card card-gray">
+            <h2>No Issues Found</h2>
+            <p id="noIssuesCount">0</p>
+        </div>
+    </section>
 
-            <div class="card card-gray">
-                <h2>No Issues Found</h2>
-                <p id="noIssues">0</p>
-            </div>
+    <!-- LOCATION STATUS CARDS -->
+    <h2 class="section-title">Location Status</h2>
+    <section class="location-grid">
 
-        </section>
+        <div class="location-card" id="loc-3rd">
+            <h3>3rd Floor Restroom</h3>
+            <p class="loc-status"></p>
+            <p class="loc-time"></p>
+        </div>
 
-        <!-- TABLE OF RECENT INSPECTIONS -->
-        <section class="table-section">
-            <h2>Recent Inspections</h2>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Inspector</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody id="inspectionTableBody">
-                    <!-- Filled by JS -->
-                </tbody>
-            </table>
-        </section>
+        <div class="location-card" id="loc-2nd">
+            <h3>2nd Floor Restroom</h3>
+            <p class="loc-status"></p>
+            <p class="loc-time"></p>
+        </div>
 
-    </main>
+        <div class="location-card" id="loc-cafe">
+            <h3>Cafeteria Mens Restroom</h3>
+            <p class="loc-status"></p>
+            <p class="loc-time"></p>
+        </div>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <p>SF Knights Facilities • Inspection Dashboard</p>
-    </footer>
+        <div class="location-card" id="loc-south">
+            <h3>Aux Gym Locker Room - South Gym Locker Room</h3>
+            <p class="loc-status"></p>
+            <p class="loc-time"></p>
+        </div>
+
+        <div class="location-card" id="loc-north">
+            <h3>Aux Gym Locker Room - North Wrestling-Baseball Locker Room</h3>
+            <p class="loc-status"></p>
+            <p class="loc-time"></p>
+        </div>
+
+    </section>
+
+    <!-- CHARTS -->
+    <h2 class="section-title">Analytics</h2>
+
+    <section class="charts-grid">
+        <div class="chart-card">
+            <h3>Open Issues by Location</h3>
+            <canvas id="openIssuesChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h3>Inspections Per Inspector</h3>
+            <canvas id="inspectorChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h3>Issue Time of Day</h3>
+            <canvas id="timeChart"></canvas>
+        </div>
+    </section>
+
+    <!-- RECENT TABLE -->
+    <section class="table-section">
+        <h2>Recent Inspections</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Inspector</th>
+                    <th>Location</th>
+                    <th>Issues Found</th>
+                    <th>Resolved</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="recentTableBody"></tbody>
+        </table>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>SF Knights Facilities • Inspection Dashboard</p>
+</footer>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
+const API = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
+
+const LOCATIONS = {
+    "3rd Floor Restroom": "loc-3rd",
+    "2nd Floor Restroom": "loc-2nd",
+    "Cafeteria Mens Restroom": "loc-cafe",
+    "Auxiliary Gym Locker Room - South Gym Locker Room": "loc-south",
+    "Auxiliary Gym Locker Room - North Wrestling-Baseball Locker Room": "loc-north"
+};
 
 async function loadDashboard() {
-    try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
+    const res = await fetch(API);
+    const data = await res.json();
 
-        // Update counts
-        document.getElementById("totalInspections").textContent = data.length;
+    document.getElementById("totalInspections").textContent = data.length;
 
-        const open = data.filter(x => x.status === "Open").length;
-        const resolved = data.filter(x => x.status === "Resolved").length;
-        const noIssues = data.filter(x => x.type === "No Issues Found").length;
+    const openIssues = data.filter(r => r["Issues Found (Select all that apply)"] !== "No Issues Found" && r["Resolved"] !== "TRUE");
+    document.getElementById("openIssues").textContent = openIssues.length;
 
-        document.getElementById("openIssues").textContent = open;
-        document.getElementById("resolvedIssues").textContent = resolved;
-        document.getElementById("noIssues").textContent = noIssues;
+    const resolved = data.filter(r => r["Resolved"] === "TRUE");
+    document.getElementById("resolvedCount").textContent = resolved.length;
 
-        // Fill table
-        const tbody = document.getElementById("inspectionTableBody");
-        tbody.innerHTML = "";
+    const noIssues = data.filter(r => r["Issues Found (Select all that apply)"] === "No Issues Found");
+    document.getElementById("noIssuesCount").textContent = noIssues.length;
 
-        data.slice().reverse().forEach(item => {
-            const row = document.createElement("tr");
+    updateLocationCards(data);
+    buildCharts(data);
+    buildRecentTable(data);
+}
 
-            row.innerHTML = `
-                <td>${item.timestamp || ""}</td>
-                <td>${item.inspector || ""}</td>
-                <td>${item.location || ""}</td>
-                <td>${item.status || item.type || ""}</td>
-                <td>${item.notes || ""}</td>
-            `;
+function updateLocationCards(data) {
+    Object.keys(LOCATIONS).forEach(loc => {
+        const id = LOCATIONS[loc];
+        const card = document.getElementById(id);
 
-            tbody.appendChild(row);
-        });
+        const rows = data.filter(r => r.location === loc);
+        if (rows.length === 0) return;
 
-    } catch (err) {
-        console.error("Error loading dashboard:", err);
-    }
+        const latest = rows[rows.length - 1];
+
+        const status = latest["Issues Found (Select all that apply)"] === "No Issues Found"
+            ? "All Clear"
+            : "Issue Found";
+
+        const color = status === "All Clear" ? "green" : "red";
+
+        card.querySelector(".loc-status").textContent = status;
+        card.querySelector(".loc-status").style.color = color;
+
+        card.querySelector(".loc-time").textContent = "Last inspected: " + (latest.timestamp || "");
+        card.style.borderTopColor = color;
+    });
+}
+
+function buildCharts(data) {
+    const openByLoc = {};
+    const inspectorCounts = {};
+    const timeBuckets = Array(24).fill(0);
+
+    data.forEach(r => {
+        const loc = r.location;
+        const insp = r.inspector;
+        const issues = r["Issues Found (Select all that apply)"];
+        const resolved = r["Resolved"];
+        const ts = r.timestamp;
+
+        inspectorCounts[insp] = (inspectorCounts[insp] || 0) + 1;
+
+        if (issues !== "No Issues Found" && resolved !== "TRUE") {
+            openByLoc[loc] = (openByLoc[loc] || 0) + 1;
+
+            if (ts) {
+                const hour = new Date(ts).getHours();
+                timeBuckets[hour]++;
+            }
+        }
+    });
+
+    new Chart(document.getElementById("openIssuesChart"), {
+        type: "bar",
+        data: {
+            labels: Object.keys(openByLoc),
+            datasets: [{
+                label: "Open Issues",
+                data: Object.values(openByLoc),
+                backgroundColor: "#b91c1c"
+            }]
+        }
+    });
+
+    new Chart(document.getElementById("inspectorChart"), {
+        type: "bar",
+        data: {
+            labels: Object.keys(inspectorCounts),
+            datasets: [{
+                label: "Inspections",
+                data: Object.values(inspectorCounts),
+                backgroundColor: "#1a3a5c"
+            }]
+        }
+    });
+
+    new Chart(document.getElementById("timeChart"), {
+        type: "line",
+        data: {
+            labels: [...Array(24).keys()],
+            datasets: [{
+                label: "Issues Reported",
+                data: timeBuckets,
+                borderColor: "#b91c1c",
+                fill: false
+            }]
+        }
+    });
+}
+
+function buildRecentTable(data) {
+    const tbody = document.getElementById("recentTableBody");
+    tbody.innerHTML = "";
+
+    data.slice().reverse().forEach(r => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${r.timestamp || ""}</td>
+            <td>${r.inspector || ""}</td>
+            <td>${r.location || ""}</td>
+            <td>${r["Issues Found (Select all that apply)"] || ""}</td>
+            <td>${r["Resolved"] || ""}</td>
+            <td>${r.notes || ""}</td>
+        `;
+        tbody.appendChild(row);
+    });
 }
 
 loadDashboard();
