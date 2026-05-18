@@ -3,177 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Inspection</title>
+    <title>Inspection Interface</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- HEADER -->
-    <header class="header">
-        <h1>New Inspection</h1>
-    </header>
+<header class="header">
+    <h1>Inspection Interface</h1>
+</header>
 
-    <main class="container">
+<main class="container">
 
-        <!-- CARD GRID FOR QUICK STATS -->
-        <section class="card-grid">
+    <!-- Inspector Selection -->
+    <section class="form-section">
+        <h2>Inspector</h2>
 
-            <div class="card card-blue">
-                <h2>Today's Inspections</h2>
-                <p id="todayCount">0</p>
-            </div>
+        <select id="inspectorSelect" class="inspector-select">
+            <option value="">Select Inspector</option>
+            <option value="Ken Westenkirchner">Ken Westenkirchner</option>
+            <option value="Corey Driver">Corey Driver</option>
+            <option value="Murell Gregory">Murell Gregory</option>
+            <option value="Khyle Weirich">Khyle Weirich</option>
+            <option value="Paris Martin">Paris Martin</option>
+            <option value="Matt Prater">Matt Prater</option>
+            <option value="Micheal Hagmeyer">Micheal Hagmeyer</option>
+            <option value="other">Other (type name)</option>
+        </select>
 
-            <div class="card card-red">
-                <h2>Open Issues</h2>
-                <p id="openCount">0</p>
-            </div>
+        <input type="text" id="otherInspector" placeholder="Enter your name"
+               style="display:none; margin-top:10px;">
+    </section>
 
-            <div class="card card-green">
-                <h2>Resolved Today</h2>
-                <p id="resolvedCount">0</p>
-            </div>
+    <!-- Areas Table -->
+    <section class="table-section">
+        <h2>Areas</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Area</th>
+                    <th>Last Inspected</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody id="areasBody"></tbody>
+        </table>
+    </section>
 
-        </section>
+</main>
 
-        <!-- INSPECTION FORM -->
-        <section class="form-section">
-            <h2>Submit New Inspection</h2>
-
-            <form id="inspectionForm" class="inspection-form">
-
-                <label>Inspector</label>
-                <select id="inspector" required>
-                    <option value="">Select Inspector</option>
-                    <option>Ken Westenkirchner</option>
-                    <option>Christie Westenkirchner</option>
-                    <option>Cole Westenkirchner</option>
-                    <option>Zachary Westenkirchner</option>
-                </select>
-
-                <label>Location</label>
-                <select id="location" required>
-                    <option value="">Select Location</option>
-                    <option>Church</option>
-                    <option>School</option>
-                    <option>Gym</option>
-                    <option>Hall</option>
-                    <option>Kitchen</option>
-                </select>
-
-                <label>Status</label>
-                <select id="status" required>
-                    <option value="">Select Status</option>
-                    <option>No Issues Found</option>
-                    <option>Open Issue</option>
-                    <option>Resolved</option>
-                </select>
-
-                <label>Notes</label>
-                <textarea id="notes" placeholder="Enter notes here..."></textarea>
-
-                <button type="submit" class="submit-btn">Submit Inspection</button>
-
-            </form>
-        </section>
-
-        <!-- RECENT SUBMISSIONS -->
-        <section class="table-section">
-            <h2>Recent Submissions</h2>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Inspector</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody id="recentTableBody">
-                    <!-- Filled by JS -->
-                </tbody>
-            </table>
-        </section>
-
-    </main>
-
-    <footer class="footer">
-        <p>SF Knights Facilities • Inspection System</p>
-    </footer>
+<footer class="footer">
+    <p>SF Knights Facilities • Inspection Interface</p>
+</footer>
 
 <script>
 const API_GET = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
 const API_POST = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
-/* LOAD DASHBOARD COUNTS + RECENT TABLE */
-async function loadData() {
-    try {
-        const response = await fetch(API_GET);
-        const data = await response.json();
+const FORM_URL = "https://docs.google.com/forms/d/1NqM4VzYqgct8mvS3Z-XDP604Lpy7iwM5sLE094BxWUA/viewform";
 
-        const today = new Date().toLocaleDateString();
+const FIELD_INSPECTOR = "entry.1456245431";
+const FIELD_LOCATION = "entry.1739126018";
 
-        document.getElementById("todayCount").textContent =
-            data.filter(x => (x.timestamp || "").includes(today)).length;
+const LOCATIONS = [
+    "3rd Floor Restroom",
+    "2nd Floor Restroom",
+    "Cafeteria Mens Restroom",
+    "Auxiliary Gym Locker Room - South Gym Locker Room",
+    "Auxiliary Gym Locker Room - North Wrestling-Baseball Locker Room"
+];
 
-        document.getElementById("openCount").textContent =
-            data.filter(x => x.status === "Open Issue").length;
+document.getElementById("inspectorSelect").addEventListener("change", () => {
+    const val = document.getElementById("inspectorSelect").value;
+    document.getElementById("otherInspector").style.display =
+        val === "other" ? "block" : "none";
+});
 
-        document.getElementById("resolvedCount").textContent =
-            data.filter(x => x.status === "Resolved").length;
+async function loadInterface() {
+    const res = await fetch(API_GET);
+    const data = await res.json();
 
-        const tbody = document.getElementById("recentTableBody");
-        tbody.innerHTML = "";
+    const lastByLocation = {};
+    data.forEach(r => {
+        if (!lastByLocation[r.location]) lastByLocation[r.location] = r;
+        else lastByLocation[r.location] = r;
+    });
 
-        data.slice().reverse().forEach(item => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${item.timestamp || ""}</td>
-                <td>${item.inspector || ""}</td>
-                <td>${item.location || ""}</td>
-                <td>${item.status || ""}</td>
-                <td>${item.notes || ""}</td>
-            `;
-            tbody.appendChild(row);
-        });
+    const tbody = document.getElementById("areasBody");
+    tbody.innerHTML = "";
 
-    } catch (err) {
-        console.error("Error loading data:", err);
-    }
+    LOCATIONS.forEach(loc => {
+        const last = lastByLocation[loc];
+        const lastTime = last ? (last.timestamp || "") : "No inspections yet";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${loc}</td>
+            <td>${lastTime}</td>
+            <td>
+                <button class="btn-all-clear" data-location="${loc}">All Clear</button>
+                <button class="btn-issue" data-location="${loc}">Issue Found</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    attachHandlers();
 }
 
-/* SUBMIT FORM */
-document.getElementById("inspectionForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+function getInspector() {
+    const sel = document.getElementById("inspectorSelect").value;
+    if (!sel) {
+        alert("Please select an inspector.");
+        return null;
+    }
+    if (sel === "other") {
+        const name = document.getElementById("otherInspector").value.trim();
+        if (!name) {
+            alert("Please type your name.");
+            return null;
+        }
+        return name;
+    }
+    return sel;
+}
+
+async function handleAllClear(location) {
+    const inspector = getInspector();
+    if (!inspector) return;
 
     const payload = {
-        inspector: document.getElementById("inspector").value,
-        location: document.getElementById("location").value,
-        status: document.getElementById("status").value,
-        notes: document.getElementById("notes").value,
+        inspector: inspector,
+        location: location,
+        "Issues Found (Select all that apply)": "No Issues Found",
+        Resolved: "TRUE",
+        notes: "",
         action: "addInspection"
     };
 
-    try {
-        await fetch(API_POST, {
-            method: "POST",
-            body: JSON.stringify(payload)
-        });
+    await fetch(API_POST, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
 
-        alert("Inspection submitted successfully!");
+    alert(`All Clear recorded for ${location}.`);
+    loadInterface();
+}
 
-        document.getElementById("inspectionForm").reset();
-        loadData();
+function handleIssueFound(location) {
+    const inspector = getInspector();
+    if (!inspector) return;
 
-    } catch (err) {
-        console.error("Error submitting inspection:", err);
-        alert("Error submitting inspection.");
-    }
-});
+    const url =
+        `${FORM_URL}?usp=pp_url&${FIELD_INSPECTOR}=${encodeURIComponent(inspector)}&${FIELD_LOCATION}=${encodeURIComponent(location)}`;
 
-loadData();
+    window.location.href = url;
+}
+
+function attachHandlers() {
+    document.querySelectorAll(".btn-all-clear").forEach(btn => {
+        btn.addEventListener("click", () => handleAllClear(btn.dataset.location));
+    });
+
+    document.querySelectorAll(".btn-issue").forEach(btn => {
+        btn.addEventListener("click", () => handleIssueFound(btn.dataset.location));
+    });
+}
+
+loadInterface();
 </script>
 
 </body>
