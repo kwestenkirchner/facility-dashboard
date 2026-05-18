@@ -1,308 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inspection Panel</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inspection Form</title>
 
 <style>
+    :root {
+        --bg: #f4f6f9;
+        --text: #001F3F;
+        --card: #ffffff;
+        --accent: #FFDC00;
+        --field-bg: #ffffff;
+        --field-border: #ccc;
+    }
+
+    [data-theme="dark"] {
+        --bg: #00152A;
+        --text: #ffffff;
+        --card: #0A2A4A;
+        --accent: #FFDC00;
+        --field-bg: #0A2A4A;
+        --field-border: rgba(255,255,255,0.2);
+    }
+
     body {
-        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #f4f6f9;
+        font-family: "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
         margin: 0;
         padding: 0;
+        transition: background 0.3s, color 0.3s;
     }
 
     header {
         background: #001F3F;
         color: white;
-        padding: 18px;
-        text-align: center;
+        padding: 16px;
         font-size: 22px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .toggle {
+        cursor: pointer;
+        font-size: 16px;
+        background: var(--accent);
+        color: #001F3F;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-weight: 600;
     }
 
     .container {
         padding: 20px;
-        max-width: 700px;
-        margin: 0 auto;
+        max-width: 600px;
+        margin: auto;
     }
 
-    .card {
-        background: white;
-        padding: 18px;
-        margin-bottom: 18px;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    .location-title {
-        font-size: 18px;
+    label {
         font-weight: 600;
-        margin-bottom: 12px;
+        margin-top: 20px;
+        display: block;
     }
 
-    .btn-row {
+    select {
+        width: 100%;
+        padding: 14px;
+        margin-top: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--field-border);
+        background: var(--field-bg);
+        color: var(--text);
+        font-size: 18px;
+    }
+
+    .sticky-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card);
+        padding: 12px;
         display: flex;
-        gap: 12px;
+        gap: 10px;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.2);
     }
 
     .btn {
         flex: 1;
-        padding: 14px;
+        padding: 16px;
+        font-size: 18px;
+        border: none;
         border-radius: 8px;
-        font-size: 16px;
         font-weight: 600;
-        cursor: pointer;
-        border: none;
-        transition: transform 0.05s ease, box-shadow 0.05s ease;
-    }
-
-    .btn:active {
-        transform: translateY(1px);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-
-    .no-issues {
-        background: #28a745; /* green */
         color: white;
-    }
-
-    .issue-found {
-        background: #dc3545; /* red */
-        color: white;
-        border: none;
-    }
-
-    #inspectorCard {
-        background: white;
-        padding: 20px;
-        margin: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    #inspectorCard h3 {
-        margin-top: 0;
-    }
-
-    select, input[type="text"] {
-        width: 100%;
-        padding: 12px;
-        font-size: 16px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        margin-top: 10px;
-    }
-
-    #saveInspectorBtn {
-        margin-top: 15px;
-        width: 100%;
-        padding: 14px;
-        background: #001F3F;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
         cursor: pointer;
     }
 
-    .small-text {
-        font-size: 12px;
-        color: #666;
-        margin-top: 6px;
-    }
-
-    #otherInspectorInput {
-        display: none;
-    }
+    .green { background: #2ECC40; }
+    .red { background: #FF4136; }
 </style>
 
 <script>
-    // === CONFIG ===
-    const BACKEND_URL =
-      "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
 
-    const FORM_BASE =
-      "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
+    const toggle = document.getElementById("themeToggle");
+    toggle.textContent = theme === "dark" ? "Light Mode ☀️" : "Dark Mode 🌙";
+}
 
-    const ENTRY_INSPECTOR = "entry.1456245431";
-    const ENTRY_LOCATION = "entry.1739126018";
-    const ENTRY_ISSUE = "entry.173778779";
-    const ENTRY_COMMENTS = "entry.1237607443";
-    const ENTRY_PHOTO = "entry.1090705986";
+window.onload = () => {
+    const saved = localStorage.getItem("theme") || "light";
+    applyTheme(saved);
+};
 
-    const LOCATIONS = [
-        "3rd Floor Men's Restroom",
-        "2nd Floor Men's Restroom",
-        "Cafeteria Men's Restroom",
-        "Auxiliary Gym Locker Room South - Gym Locker Room",
-        "Auxiliary Gym Locker Room North - Wrestling - Baseball Locker Room"
-    ];
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+}
 
-    const INSPECTORS = [
-        "Ken Westenkirchner",
-        "Corey Driver",
-        "Murell Gregory",
-        "Khyle Weirich",
-        "Paris Martin",
-        "Matt Prater",
-        "Michael Hagmeyer",
-        "Other"
-    ];
+const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
-    function ensureInspector() {
-        const inspector = localStorage.getItem("inspectorName");
-        if (!inspector) {
-            document.getElementById("inspectorCard").style.display = "block";
-            document.getElementById("mainPanel").style.display = "none";
-        } else {
-            document.getElementById("inspectorCard").style.display = "none";
-            document.getElementById("mainPanel").style.display = "block";
-        }
+async function submitNoIssues() {
+    const inspector = document.getElementById("inspector").value;
+    const location = document.getElementById("location").value;
+
+    if (!inspector || !location) {
+        alert("Please select both Inspector and Location.");
+        return;
     }
 
-    function inspectorChanged() {
-        const sel = document.getElementById("inspectorSelect");
-        const otherInput = document.getElementById("otherInspectorInput");
+    const payload = {
+        action: "logNoIssue",
+        inspector,
+        location
+    };
 
-        if (sel.value === "Other") {
-            otherInput.style.display = "block";
-        } else {
-            otherInput.style.display = "none";
-        }
-    }
-
-    function saveInspector() {
-        const sel = document.getElementById("inspectorSelect");
-        let name = sel.value;
-
-        if (name === "Other") {
-            const typed = document.getElementById("otherInspectorInput").value.trim();
-            if (!typed) {
-                alert("Please enter a name for 'Other'.");
-                return;
-            }
-            name = typed;
-        }
-
-        localStorage.setItem("inspectorName", name);
-        ensureInspector();
-    }
-
-    function changeInspector() {
-        localStorage.removeItem("inspectorName");
-        ensureInspector();
-    }
-
-    function buildIssueLink(location) {
-        const inspector = localStorage.getItem("inspectorName") || "";
-
-        const params = new URLSearchParams();
-        params.set(ENTRY_INSPECTOR, inspector);
-        params.set(ENTRY_LOCATION, location);
-        params.set(ENTRY_ISSUE, "");
-        params.set(ENTRY_COMMENTS, "");
-        params.set(ENTRY_PHOTO, "");
-
-        return FORM_BASE + "&" + params.toString();
-    }
-
-    async function logNoIssues(location) {
-        const inspector = localStorage.getItem("inspectorName") || "Unknown";
-
-        try {
-            await fetch(BACKEND_URL + "?action=logNoIssue", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ location, inspector })
-            });
-
-            alert("No Issues logged for: " + location);
-        } catch (err) {
-            alert("Error logging No Issues. Please try again.");
-            console.error(err);
-        }
-    }
-
-    window.addEventListener("load", () => {
-        const sel = document.getElementById("inspectorSelect");
-        INSPECTORS.forEach(name => {
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            sel.appendChild(opt);
-        });
-
-        const container = document.getElementById("locationsContainer");
-        LOCATIONS.forEach(loc => {
-            const card = document.createElement("div");
-            card.className = "card";
-
-            const title = document.createElement("div");
-            title.className = "location-title";
-            title.textContent = loc;
-
-            const row = document.createElement("div");
-            row.className = "btn-row";
-
-            const noIssuesBtn = document.createElement("button");
-            noIssuesBtn.className = "btn no-issues";
-            noIssuesBtn.textContent = "No Issues";
-            noIssuesBtn.onclick = () => logNoIssues(loc);
-
-            const issueBtn = document.createElement("button");
-            issueBtn.className = "btn issue-found";
-            issueBtn.textContent = "Issue Found";
-            issueBtn.onclick = () => {
-                const url = buildIssueLink(loc);
-                window.location.href = url;
-            };
-
-            row.appendChild(noIssuesBtn);
-            row.appendChild(issueBtn);
-
-            card.appendChild(title);
-            card.appendChild(row);
-
-            container.appendChild(card);
-        });
-
-        ensureInspector();
+    await fetch(BACKEND_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
     });
+
+    alert("No Issues logged successfully.");
+    location.reload();
+}
+
+function reportIssue() {
+    const inspector = document.getElementById("inspector").value;
+    const location = document.getElementById("location").value;
+
+    if (!inspector || !location) {
+        alert("Please select both Inspector and Location.");
+        return;
+    }
+
+    const formURL =
+      "https://docs.google.com/forms/d/e/1FAIpQLScp8u1x0YqYpYg7wHkRkV4xg5xV2r0tZq7uQ2xk9p3Y2u7QxA/viewform" +
+      `?usp=pp_url&entry.1111111111=${encodeURIComponent(inspector)}` +
+      `&entry.2222222222=${encodeURIComponent(location)}`;
+
+    window.location.href = formURL;
+}
 </script>
 
 </head>
 <body>
 
 <header>
-    Inspection Panel
+    Inspection Form
+    <div id="themeToggle" class="toggle" onclick="toggleTheme()">Dark Mode 🌙</div>
 </header>
 
-<div id="inspectorCard">
-    <h3>Select Inspector</h3>
+<div class="container">
+    <label>Inspector</label>
+    <select id="inspector">
+        <option value="">Select Inspector</option>
+        <option>Ken</option>
+        <option>Corey</option>
+        <option>Christie</option>
+        <option>Other</option>
+    </select>
 
-    <select id="inspectorSelect" onchange="inspectorChanged()"></select>
-
-    <input type="text" id="otherInspectorInput" placeholder="Enter inspector name">
-
-    <button id="saveInspectorBtn" onclick="saveInspector()">Save</button>
-
-    <div class="small-text">
-        This device will remember your name. Tap "Change Inspector" if someone else uses this device.
-    </div>
+    <label>Location</label>
+    <select id="location">
+        <option value="">Select Location</option>
+        <option>Cafeteria</option>
+        <option>3rd Floor</option>
+        <option>Gym</option>
+        <option>Hallway A</option>
+        <option>Hallway B</option>
+        <option>Restroom 1</option>
+        <option>Restroom 2</option>
+        <option>Outside Grounds</option>
+    </select>
 </div>
 
-<div id="mainPanel" class="container" style="display:none;">
-    <div style="text-align:right; margin-bottom:10px;">
-        <button class="btn issue-found" style="width:auto; padding:8px 12px; font-size:13px;" onclick="changeInspector()">
-            Change Inspector
-        </button>
-    </div>
-
-    <div id="locationsContainer"></div>
+<div class="sticky-bar">
+    <button class="btn green" onclick="submitNoIssues()">No Issues</button>
+    <button class="btn red" onclick="reportIssue()">Issue Found</button>
 </div>
 
 </body>
