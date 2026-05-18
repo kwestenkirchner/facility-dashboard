@@ -7,7 +7,7 @@
 
 <style>
     body {
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         background: #f4f6f9;
         margin: 0;
         padding: 0;
@@ -24,8 +24,8 @@
 
     .container {
         padding: 20px;
-        max-width: 600px;
-        margin: auto;
+        max-width: 700px;
+        margin: 0 auto;
     }
 
     .card {
@@ -37,7 +37,7 @@
     }
 
     .location-title {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         margin-bottom: 12px;
     }
@@ -55,6 +55,12 @@
         font-weight: 600;
         cursor: pointer;
         border: none;
+        transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+
+    .btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
     .no-issues {
@@ -68,7 +74,7 @@
         color: #001F3F;
     }
 
-    #inspectorSelectCard {
+    #inspectorCard {
         background: white;
         padding: 20px;
         margin: 20px;
@@ -76,15 +82,20 @@
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
+    #inspectorCard h3 {
+        margin-top: 0;
+    }
+
     select {
         width: 100%;
         padding: 12px;
         font-size: 16px;
         border-radius: 6px;
+        border: 1px solid #ccc;
         margin-top: 10px;
     }
 
-    #saveInspector {
+    #saveInspectorBtn {
         margin-top: 15px;
         width: 100%;
         padding: 14px;
@@ -96,10 +107,20 @@
         cursor: pointer;
     }
 
+    .small-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 6px;
+    }
 </style>
 
 <script>
-    const ISSUE_FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
+    // === CONFIG ===
+    const BACKEND_URL =
+      "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+
+    const ISSUE_FORM_BASE =
+      "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
 
     const ENTRY_ISSUE = "entry.173778779";
     const ENTRY_COMMENTS = "entry.1237607443";
@@ -112,69 +133,137 @@
         "Auxiliary Locker Room – South"
     ];
 
-    function buildIssueLink(location, inspector) {
-        return `${ISSUE_FORM_BASE}&${ENTRY_ISSUE}=&${ENTRY_COMMENTS}=&${ENTRY_PHOTO}=&entry.inspector=${encodeURIComponent(inspector)}&entry.location=${encodeURIComponent(location)}`;
-    }
+    const INSPECTORS = [
+        "Ken Westenkirchner",
+        "Corey Driver",
+        "Murell Gregory",
+        "Khyle Weirich",
+        "Paris Martin",
+        "Matt Prater"
+    ];
 
-    function logNoIssues(location) {
+    function ensureInspector() {
         const inspector = localStorage.getItem("inspectorName");
-        fetch("YOUR_APPS_SCRIPT_URL/logNoIssue", {
-            method: "POST",
-            body: JSON.stringify({ location, inspector })
-        }).then(() => {
-            alert("Logged successfully");
-        });
+        if (!inspector) {
+            document.getElementById("inspectorCard").style.display = "block";
+            document.getElementById("mainPanel").style.display = "none";
+        } else {
+            document.getElementById("inspectorCard").style.display = "none";
+            document.getElementById("mainPanel").style.display = "block";
+        }
     }
 
     function saveInspector() {
-        const name = document.getElementById("inspectorSelect").value;
+        const sel = document.getElementById("inspectorSelect");
+        const name = sel.value;
+        if (!name) return;
         localStorage.setItem("inspectorName", name);
-        document.getElementById("inspectorSelectCard").style.display = "none";
-        document.getElementById("mainPanel").style.display = "block";
+        ensureInspector();
     }
 
-    window.onload = () => {
-        const inspector = localStorage.getItem("inspectorName");
-        if (!inspector) {
-            document.getElementById("inspectorSelectCard").style.display = "block";
-            document.getElementById("mainPanel").style.display = "none";
+    function changeInspector() {
+        localStorage.removeItem("inspectorName");
+        ensureInspector();
+    }
+
+    function buildIssueLink(location) {
+        const params = new URLSearchParams();
+        params.set(ENTRY_ISSUE, "");
+        params.set(ENTRY_COMMENTS, "");
+        params.set(ENTRY_PHOTO, "");
+        return ISSUE_FORM_BASE + "&" + params.toString();
+    }
+
+    async function logNoIssues(location) {
+        const inspector = localStorage.getItem("inspectorName") || "Unknown";
+
+        try {
+            await fetch(BACKEND_URL + "?action=logNoIssue", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ location, inspector })
+            });
+
+            alert("No Issues logged for: " + location);
+        } catch (err) {
+            alert("Error logging No Issues. Please try again.");
+            console.error(err);
         }
-    };
+    }
+
+    window.addEventListener("load", () => {
+        const sel = document.getElementById("inspectorSelect");
+        INSPECTORS.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+
+        const container = document.getElementById("locationsContainer");
+        LOCATIONS.forEach(loc => {
+            const card = document.createElement("div");
+            card.className = "card";
+
+            const title = document.createElement("div");
+            title.className = "location-title";
+            title.textContent = loc;
+
+            const row = document.createElement("div");
+            row.className = "btn-row";
+
+            const noIssuesBtn = document.createElement("button");
+            noIssuesBtn.className = "btn no-issues";
+            noIssuesBtn.textContent = "No Issues";
+            noIssuesBtn.onclick = () => logNoIssues(loc);
+
+            const issueBtn = document.createElement("button");
+            issueBtn.className = "btn issue-found";
+            issueBtn.textContent = "Issue Found";
+            issueBtn.onclick = () => {
+                const url = buildIssueLink(loc);
+                window.location.href = url;
+            };
+
+            row.appendChild(noIssuesBtn);
+            row.appendChild(issueBtn);
+
+            card.appendChild(title);
+            card.appendChild(row);
+
+            container.appendChild(card);
+        });
+
+        ensureInspector();
+    });
 </script>
 
 </head>
 <body>
 
-<header>Inspection Panel</header>
+<header>
+    Inspection Panel
+</header>
 
-<div id="inspectorSelectCard">
+<div id="inspectorCard">
     <h3>Select Inspector</h3>
-    <select id="inspectorSelect">
-        <option>Ken</option>
-        <option>Mike</option>
-        <option>Sarah</option>
-        <option>John</option>
-    </select>
-    <button id="saveInspector" onclick="saveInspector()">Save</button>
+    <select id="inspectorSelect"></select>
+    <button id="saveInspectorBtn" onclick="saveInspector()">Save</button>
+    <div class="small-text">
+        This device will remember your name. Tap "Change Inspector" if someone else uses this device.
+    </div>
 </div>
 
-<div id="mainPanel" class="container">
+<div id="mainPanel" class="container" style="display:none;">
+    <div style="text-align:right; margin-bottom:10px;">
+        <button class="btn issue-found" style="width:auto; padding:8px 12px; font-size:13px;" onclick="changeInspector()">
+            Change Inspector
+        </button>
+    </div>
 
-    <!-- Locations -->
-    <script>
-        document.write(
-            LOCATIONS.map(loc => `
-                <div class="card">
-                    <div class="location-title">${loc}</div>
-                    <div class="btn-row">
-                        <button class="btn no-issues" onclick="logNoIssues('${loc}')">No Issues</button>
-                        <button class="btn issue-found" onclick="window.location.href = buildIssueLink('${loc}', localStorage.getItem('inspectorName'))">Issue Found</button>
-                    </div>
-                </div>
-            `).join("")
-        );
-    </script>
-
+    <div id="locationsContainer"></div>
 </div>
 
 </body>
