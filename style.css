@@ -1,178 +1,52 @@
-/* ---------------------------------------------------
-   GLOBAL RESET
---------------------------------------------------- */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "Segoe UI", Arial, sans-serif;
-}
-
-body {
-    background: #f4f6f9;
-    color: #111;
-    line-height: 1.5;
-}
-
-/* ---------------------------------------------------
-   HEADER
---------------------------------------------------- */
-.header {
-    background: #1a3a5c; /* Knights Navy Blue */
-    color: white;
-    padding: 20px;
-    text-align: center;
-    border-bottom: 4px solid #b91c1c; /* Knights Red */
-}
-
-.header h1 {
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-/* ---------------------------------------------------
-   MAIN CONTAINER
---------------------------------------------------- */
-.container {
-    width: 95%;
-    max-width: 1200px;
-    margin: 25px auto;
-}
-
-/* ---------------------------------------------------
-   CARD GRID
---------------------------------------------------- */
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    text-align: center;
-    border-top: 5px solid transparent;
-}
-
-.card h2 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
-}
-
-.card p {
-    font-size: 2rem;
-    font-weight: bold;
-}
-
-/* Card Color Accents */
-.card-blue {
-    border-top-color: #1a3a5c;
-}
-
-.card-red {
-    border-top-color: #b91c1c;
-}
-
-.card-green {
-    border-top-color: #15803d;
-}
-
-.card-gray {
-    border-top-color: #6b7280;
-}
-
-/* ---------------------------------------------------
-   TABLE SECTION
---------------------------------------------------- */
-.table-section h2 {
-    margin-bottom: 10px;
+/* Section Titles */
+.section-title {
+    margin: 25px 0 10px;
     font-size: 1.4rem;
     color: #1a3a5c;
 }
 
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
+/* Location Status Cards */
+.location-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.location-card {
     background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.data-table th {
-    background: #1a3a5c;
-    color: white;
-    padding: 12px;
-    font-size: 0.95rem;
-}
-
-.data-table td {
-    padding: 12px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.data-table tr:nth-child(even) {
-    background: #f9fafb;
-}
-
-.data-table tr:hover {
-    background: #eef2f7;
-}
-
-/* ---------------------------------------------------
-   FOOTER
---------------------------------------------------- */
-.footer {
-    text-align: center;
     padding: 15px;
-    margin-top: 40px;
+    border-radius: 10px;
+    border-top: 5px solid #6b7280;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.location-card h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.location-card .loc-status {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.location-card .loc-time {
+    font-size: 0.85rem;
     color: #555;
-    font-size: 0.9rem;
 }
 
-/* ---------------------------------------------------
-   MOBILE RESPONSIVENESS
---------------------------------------------------- */
-@media (max-width: 600px) {
-    .header h1 {
-        font-size: 1.6rem;
-    }
-
-    .card p {
-        font-size: 1.6rem;
-    }
-
-    .data-table th,
-    .data-table td {
-        padding: 8px;
-        font-size: 0.85rem;
-    }
+/* Charts */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    margin-bottom: 40px;
 }
-/* Landing Page Navigation Cards */
-.nav-card {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    padding: 25px;
+
+.chart-card {
+    background: white;
+    padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.nav-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-.intro-section {
-    margin-bottom: 25px;
-}
-
-.intro-section h2 {
-    color: #1a3a5c;
-    margin-bottom: 10px;
 }
