@@ -1,131 +1,397 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inspection Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inspection Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
 
-<header class="header">
-    <h1>Inspection Dashboard</h1>
+<!-- HEADER -->
+<header>
+  <div class="hbar"></div>
+  <div class="hinner">
+    <div class="htitle">
+      <h1>Inspection Dashboard</h1>
+      <p>St. Francis de Sales High School</p>
+    </div>
+
+    <div class="hright">
+      <div class="live-pill">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+      <div class="clock" id="clock">--:--</div>
+      <button class="rbtn" id="refreshBtn">Refresh</button>
+    </div>
+  </div>
 </header>
 
-<main class="container">
+<main>
 
-    <section class="card-grid">
-        <div class="card card-blue">
-            <h2>Total Inspections</h2>
-            <p id="totalInspections">0</p>
-        </div>
+  <!-- STATS -->
+  <div class="stats">
 
-        <div class="card card-red">
-            <h2>Open Issues</h2>
-            <p id="openIssues">0</p>
-        </div>
+    <!-- NEW FIRST CARD: AVG ISSUE TIME -->
+    <div class="stat sr">
+      <div class="slabel">Avg Issue Time</div>
+      <div class="sval" id="avgIssueTime">--:--</div>
+      <div class="ssub">Across all reported issues</div>
+    </div>
 
-        <div class="card card-green">
-            <h2>Resolved</h2>
-            <p id="resolvedCount">0</p>
-        </div>
+    <!-- ORIGINAL CARDS -->
+    <div class="stat sn">
+      <div class="slabel">Total Inspections</div>
+      <div class="sval" id="totalInspections">0</div>
+      <div class="ssub">All logged entries</div>
+    </div>
 
-        <div class="card card-gray">
-            <h2>Avg Issue Time</h2>
-            <p id="avgIssueTime">N/A</p>
-        </div>
-    </section>
+    <div class="stat sr">
+      <div class="slabel">Open Issues</div>
+      <div class="sval" id="openIssues">0</div>
+      <div class="ssub">Unresolved</div>
+    </div>
 
-    <section class="table-section">
-        <h2>Recent Inspections</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Inspector</th>
-                    <th>Location</th>
-                    <th>Issues Found</th>
-                    <th>Resolved</th>
-                    <th>Notes</th>
-                </tr>
-            </thead>
-            <tbody id="recentTableBody"></tbody>
-        </table>
-    </section>
+    <div class="stat sg">
+      <div class="slabel">Resolved</div>
+      <div class="sval" id="resolvedCount">0</div>
+      <div class="ssub">Marked complete</div>
+    </div>
+
+  </div>
+
+  <!-- LOCATION GRID -->
+  <div class="stitle">Locations</div>
+  <div class="loc-grid" id="locationGrid"></div>
+
+  <!-- TWO COLUMN SECTION -->
+  <div class="two">
+
+    <!-- ISSUE LIST -->
+    <div class="card">
+      <div class="ctitle">Open Issues</div>
+      <ul class="ilist" id="issueList"></ul>
+    </div>
+
+    <!-- INSPECTOR GRID -->
+    <div class="card">
+      <div class="ctitle">Inspector Activity</div>
+      <div class="ing" id="inspectorGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="ctitle">Recent Inspections</div>
+    <div class="tbl-w">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Inspector</th>
+            <th>Location</th>
+            <th>Issues</th>
+            <th>Resolved</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="recentTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="two">
+
+    <div class="card">
+      <div class="ctitle">Issues by Location</div>
+      <div class="chart-wrap">
+        <canvas id="chartLocation"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Issues by Time of Day</div>
+      <div class="chart-wrap short">
+        <canvas id="chartTime"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">SFDS Facilities Dashboard</div>
 
 </main>
 
-<footer class="footer">
-    <p>SF Knights Facilities • Inspection Dashboard</p>
-</footer>
+<div id="toast"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec?action=getAllInspections";
+const API = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
+// CLOCK
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// LOAD DASHBOARD
 async function loadDashboard() {
-    const res = await fetch(API);
-    const data = await res.json();
+  document.getElementById("refreshBtn").disabled = true;
 
-    document.getElementById("totalInspections").textContent = data.length;
+  const res = await fetch(API + "?action=getAllInspections");
+  const data = await res.json();
 
-    const openIssues = data.filter(r =>
-        r["Issues Found (Select all that apply)"] !== "No Issues Found" &&
-        r["Resolved"] !== "TRUE"
-    );
-    document.getElementById("openIssues").textContent = openIssues.length;
+  buildStats(data);
+  buildLocations(data);
+  buildIssues(data);
+  buildInspectors(data);
+  buildTable(data);
+  buildCharts(data);
 
-    const resolved = data.filter(r => r["Resolved"] === "TRUE");
-    document.getElementById("resolvedCount").textContent = resolved.length;
-
-    updateAvgIssueTime(openIssues);
-    buildRecentTable(data);
+  document.getElementById("refreshBtn").disabled = false;
+  showToast("Dashboard updated");
 }
 
-function updateAvgIssueTime(openIssues) {
-    const hours = [];
+// STATS
+function buildStats(data) {
+  document.getElementById("totalInspections").textContent = data.length;
 
-    openIssues.forEach(r => {
-        if (!r.timestamp) return;
-        const d = new Date(r.timestamp);
-        if (!isNaN(d)) hours.push(d.getHours() + d.getMinutes() / 60);
+  const open = data.filter(r => r.Resolved !== "TRUE");
+  document.getElementById("openIssues").textContent = open.length;
+
+  const resolved = data.filter(r => r.Resolved === "TRUE");
+  document.getElementById("resolvedCount").textContent = resolved.length;
+
+  // NEW: AVG ISSUE TIME
+  const issueTimes = open
+    .filter(r => r.timestamp)
+    .map(r => new Date(r.timestamp));
+
+  if (issueTimes.length === 0) {
+    document.getElementById("avgIssueTime").textContent = "--:--";
+    return;
+  }
+
+  const avg =
+    issueTimes.reduce((a, d) => a + d.getHours() + d.getMinutes() / 60, 0) /
+    issueTimes.length;
+
+  const h = Math.floor(avg);
+  const m = Math.round((avg - h) * 60);
+
+  const d = new Date();
+  d.setHours(h);
+  d.setMinutes(m);
+
+  document.getElementById("avgIssueTime").textContent =
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// LOCATION GRID
+function buildLocations(data) {
+  const grid = document.getElementById("locationGrid");
+  grid.innerHTML = "";
+
+  const byLoc = {};
+  data.forEach(r => {
+    if (!byLoc[r.location]) byLoc[r.location] = [];
+    byLoc[r.location].push(r);
+  });
+
+  Object.keys(byLoc).forEach(loc => {
+    const entries = byLoc[loc];
+    const last = entries[entries.length - 1];
+
+    const card = document.createElement("div");
+    card.className = "lcard " + (last.Resolved === "TRUE" ? "lg" : "lr");
+
+    card.innerHTML = `
+      <div class="lname">${loc}</div>
+      <div class="lbadge ${last.Resolved === "TRUE" ? "bgg" : "bgr"}">
+        ${last.Resolved === "TRUE" ? "Resolved" : "Issue"}
+      </div>
+      <div class="lmeta">
+        <span><strong>Last:</strong> ${last.timestamp || ""}</span>
+        <span><strong>By:</strong> ${last.inspector || ""}</span>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+// ISSUE LIST
+function buildIssues(data) {
+  const list = document.getElementById("issueList");
+  list.innerHTML = "";
+
+  const open = data.filter(r => r.Resolved !== "TRUE");
+
+  if (open.length === 0) {
+    list.innerHTML = `<div class="none">No open issues</div>`;
+    return;
+  }
+
+  open.forEach(r => {
+    const li = document.createElement("li");
+    li.className = "iitem";
+
+    li.innerHTML = `
+      <div class="idot"></div>
+      <div>
+        <div class="iloc">${r.location}</div>
+        <div class="itype">${r["Issues Found (Select all that apply)"]}</div>
+        <div class="imeta">${r.timestamp}</div>
+      </div>
+      <div class="iactions">
+        <button class="resolve-btn" onclick="resolveIssue('${r.id}')">Resolve</button>
+      </div>
+    `;
+
+    list.appendChild(li);
+  });
+}
+
+// RESOLVE ISSUE
+async function resolveIssue(id) {
+  await fetch(API, {
+    method: "POST",
+    body: JSON.stringify({ action: "resolveIssue", id })
+  });
+
+  showToast("Issue resolved");
+  loadDashboard();
+}
+
+// INSPECTOR GRID
+function buildInspectors(data) {
+  const grid = document.getElementById("inspectorGrid");
+  grid.innerHTML = "";
+
+  const byInspector = {};
+  data.forEach(r => {
+    if (!byInspector[r.inspector]) byInspector[r.inspector] = 0;
+    byInspector[r.inspector]++;
+  });
+
+  Object.keys(byInspector).forEach(name => {
+    const count = byInspector[name];
+
+    const card = document.createElement("div");
+    card.className = "icard";
+
+    card.innerHTML = `
+      <div class="iname">${name}</div>
+      <div class="inum">${count}</div>
+      <div class="isub">Inspections</div>
+      <div class="ibar-w"><div class="ibar" style="width:${Math.min(
+        count * 10,
+        100
+      )}%"></div></div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+// TABLE
+function buildTable(data) {
+  const tbody = document.getElementById("recentTableBody");
+  tbody.innerHTML = "";
+
+  data
+    .slice()
+    .reverse()
+    .forEach(r => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${r.timestamp || ""}</td>
+        <td>${r.inspector || ""}</td>
+        <td>${r.location || ""}</td>
+        <td>${r["Issues Found (Select all that apply)"] || ""}</td>
+        <td>${r.Resolved || ""}</td>
+        <td>${r.notes || ""}</td>
+      `;
+
+      tbody.appendChild(tr);
     });
+}
 
-    if (hours.length === 0) {
-        document.getElementById("avgIssueTime").textContent = "N/A";
-        return;
+// CHARTS
+let chartLocation, chartTime;
+
+function buildCharts(data) {
+  const ctx1 = document.getElementById("chartLocation").getContext("2d");
+  const ctx2 = document.getElementById("chartTime").getContext("2d");
+
+  const byLoc = {};
+  const byHour = {};
+
+  data.forEach(r => {
+    if (!byLoc[r.location]) byLoc[r.location] = 0;
+    byLoc[r.location]++;
+
+    if (r.timestamp) {
+      const h = new Date(r.timestamp).getHours();
+      if (!byHour[h]) byHour[h] = 0;
+      byHour[h]++;
     }
+  });
 
-    const avg = hours.reduce((a, b) => a + b, 0) / hours.length;
-    const hour = Math.floor(avg);
-    const minutes = Math.round((avg - hour) * 60);
+  if (chartLocation) chartLocation.destroy();
+  if (chartTime) chartTime.destroy();
 
-    const d = new Date();
-    d.setHours(hour);
-    d.setMinutes(minutes);
+  chartLocation = new Chart(ctx1, {
+    type: "bar",
+    data: {
+      labels: Object.keys(byLoc),
+      datasets: [
+        {
+          label: "Issues",
+          data: Object.values(byLoc),
+          backgroundColor: "#b91c1c"
+        }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
 
-    document.getElementById("avgIssueTime").textContent =
-        d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  chartTime = new Chart(ctx2, {
+    type: "line",
+    data: {
+      labels: Object.keys(byHour),
+      datasets: [
+        {
+          label: "Issues",
+          data: Object.values(byHour),
+          borderColor: "#b91c1c",
+          backgroundColor: "rgba(185,28,28,0.2)"
+        }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
 }
 
-function buildRecentTable(data) {
-    const tbody = document.getElementById("recentTableBody");
-    tbody.innerHTML = "";
-
-    data.slice().reverse().forEach(r => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${r.timestamp || ""}</td>
-            <td>${r.inspector || ""}</td>
-            <td>${r.location || ""}</td>
-            <td>${r["Issues Found (Select all that apply)"] || ""}</td>
-            <td>${r["Resolved"] || ""}</td>
-            <td>${r.notes || ""}</td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
+document.getElementById("refreshBtn").addEventListener("click", loadDashboard);
 loadDashboard();
 </script>
 
