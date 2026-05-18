@@ -64,14 +64,14 @@
     }
 
     .no-issues {
-        background: #B3001B;
+        background: #28a745; /* green */
         color: white;
     }
 
     .issue-found {
-        background: white;
-        border: 2px solid #001F3F;
-        color: #001F3F;
+        background: #dc3545; /* red */
+        color: white;
+        border: none;
     }
 
     #inspectorCard {
@@ -86,7 +86,7 @@
         margin-top: 0;
     }
 
-    select {
+    select, input[type="text"] {
         width: 100%;
         padding: 12px;
         font-size: 16px;
@@ -112,6 +112,10 @@
         color: #666;
         margin-top: 6px;
     }
+
+    #otherInspectorInput {
+        display: none;
+    }
 </style>
 
 <script>
@@ -119,18 +123,21 @@
     const BACKEND_URL =
       "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
 
-    const ISSUE_FORM_BASE =
+    const FORM_BASE =
       "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
 
+    const ENTRY_INSPECTOR = "entry.1456245431";
+    const ENTRY_LOCATION = "entry.1739126018";
     const ENTRY_ISSUE = "entry.173778779";
     const ENTRY_COMMENTS = "entry.1237607443";
     const ENTRY_PHOTO = "entry.1090705986";
 
     const LOCATIONS = [
-        "3rd Floor Restroom",
-        "2nd Floor Restroom",
+        "3rd Floor Men's Restroom",
+        "2nd Floor Men's Restroom",
         "Cafeteria Men's Restroom",
-        "Auxiliary Locker Room – South"
+        "Auxiliary Gym Locker Room South - Gym Locker Room",
+        "Auxiliary Gym Locker Room North - Wrestling - Baseball Locker Room"
     ];
 
     const INSPECTORS = [
@@ -139,7 +146,9 @@
         "Murell Gregory",
         "Khyle Weirich",
         "Paris Martin",
-        "Matt Prater"
+        "Matt Prater",
+        "Michael Hagmeyer",
+        "Other"
     ];
 
     function ensureInspector() {
@@ -153,10 +162,30 @@
         }
     }
 
+    function inspectorChanged() {
+        const sel = document.getElementById("inspectorSelect");
+        const otherInput = document.getElementById("otherInspectorInput");
+
+        if (sel.value === "Other") {
+            otherInput.style.display = "block";
+        } else {
+            otherInput.style.display = "none";
+        }
+    }
+
     function saveInspector() {
         const sel = document.getElementById("inspectorSelect");
-        const name = sel.value;
-        if (!name) return;
+        let name = sel.value;
+
+        if (name === "Other") {
+            const typed = document.getElementById("otherInspectorInput").value.trim();
+            if (!typed) {
+                alert("Please enter a name for 'Other'.");
+                return;
+            }
+            name = typed;
+        }
+
         localStorage.setItem("inspectorName", name);
         ensureInspector();
     }
@@ -167,11 +196,16 @@
     }
 
     function buildIssueLink(location) {
+        const inspector = localStorage.getItem("inspectorName") || "";
+
         const params = new URLSearchParams();
+        params.set(ENTRY_INSPECTOR, inspector);
+        params.set(ENTRY_LOCATION, location);
         params.set(ENTRY_ISSUE, "");
         params.set(ENTRY_COMMENTS, "");
         params.set(ENTRY_PHOTO, "");
-        return ISSUE_FORM_BASE + "&" + params.toString();
+
+        return FORM_BASE + "&" + params.toString();
     }
 
     async function logNoIssues(location) {
@@ -249,8 +283,13 @@
 
 <div id="inspectorCard">
     <h3>Select Inspector</h3>
-    <select id="inspectorSelect"></select>
+
+    <select id="inspectorSelect" onchange="inspectorChanged()"></select>
+
+    <input type="text" id="otherInspectorInput" placeholder="Enter inspector name">
+
     <button id="saveInspectorBtn" onclick="saveInspector()">Save</button>
+
     <div class="small-text">
         This device will remember your name. Tap "Change Inspector" if someone else uses this device.
     </div>
