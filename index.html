@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inspection Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=4001" />
+  <link rel="stylesheet" href="style.css?v=5001" />
 </head>
 
 <body>
@@ -32,32 +32,29 @@
 
   <!-- STATS -->
   <div class="stats">
-
-    <!-- GLOBAL AVG ISSUE TIME -->
-    <div class="stat sr">
+    <div class="stat">
       <div class="slabel">Avg Issue Time</div>
       <div class="sval" id="avgIssueTime">--:--</div>
       <div class="ssub">Across all reported issues</div>
     </div>
 
-    <div class="stat sn">
+    <div class="stat">
       <div class="slabel">Total Inspections</div>
       <div class="sval" id="totalInspections">0</div>
       <div class="ssub">All logged entries</div>
     </div>
 
-    <div class="stat sr">
+    <div class="stat">
       <div class="slabel">Open Issues</div>
       <div class="sval" id="openIssues">0</div>
       <div class="ssub">Unresolved</div>
     </div>
 
-    <div class="stat sg">
+    <div class="stat">
       <div class="slabel">Resolved</div>
       <div class="sval" id="resolvedCount">0</div>
       <div class="ssub">Marked complete</div>
     </div>
-
   </div>
 
   <!-- LOCATION GRID -->
@@ -172,7 +169,8 @@ function buildStats(data) {
   document.getElementById('totalInspections').textContent = data.length;
 
   const open = data.filter(r => {
-    const hasIssues = r.issues && String(r.issues).trim() !== '';
+    const issues = (r.issues || '').toString().trim();
+    const hasIssues = issues !== '';
     const isResolved = String(r.resolved).toUpperCase() === 'TRUE';
     return hasIssues && !isResolved;
   });
@@ -211,11 +209,10 @@ function buildStats(data) {
 function isInspectionSeason(date) {
   const month = date.getMonth(); // 0-11
   const day = date.getDay(); // 0=Sun
-  if (month === 5 || month === 6 || month === 7) return false; // Jun, Jul, Aug? (0-based: 5,6,7) -> adjust: Aug is 7
-  // We want Aug (7) through May (4). So off-season is Jun (5) and Jul (6).
-  // Correcting:
-  if (month === 5 || month === 6) return false; // Jun, Jul
-  if (day === 0 || day === 6) return false; // weekend
+  // Off-season: June (5) and July (6)
+  if (month === 5 || month === 6) return false;
+  // Weekends off
+  if (day === 0 || day === 6) return false;
   return true;
 }
 
@@ -234,10 +231,9 @@ function getTodaySlot(date, targetHour) {
 
 function getNextInspectionDateTime(date) {
   const d = new Date(date);
-  // If not in season, jump to next season start: Aug 1, 9:00
   if (!isInspectionSeason(d)) {
     let year = d.getFullYear();
-    let next = new Date(year, 7, 1, 9, 0, 0); // Aug (7), 1st, 9:00
+    let next = new Date(year, 7, 1, 9, 0, 0); // Aug 1, 9:00
     if (d > next) {
       next = new Date(year + 1, 7, 1, 9, 0, 0);
     }
@@ -251,7 +247,6 @@ function getNextInspectionDateTime(date) {
   if (hour >= 9 && hour < 15) {
     return getTodaySlot(d, hour + 1);
   }
-  // After 3pm, next business day at 9
   const next = new Date(d);
   next.setDate(next.getDate() + 1);
   while (!isInspectionSeason(next)) {
@@ -280,21 +275,25 @@ function buildLocations(data) {
     const lastTime = last.timestamp ? new Date(last.timestamp) : null;
     const now = new Date();
 
-    let statusText = 'No Issues Found';
-    let cardClass = 'lg'; // green
-    let statusColorLabel = 'No Issues Found';
-
-    const hasIssues = last.issues && String(last.issues).trim() !== '';
+    const issues = (last.issues || '').toString().trim();
+    const hasIssues = issues !== '';
     const isResolved = String(last.resolved).toUpperCase() === 'TRUE';
+
+    let statusText = 'All Clear';
+    let cardClass = 'lg';
+    let badgeClass = 'bgg';
+    let badgeLabel = 'All Clear';
 
     if (hasIssues && !isResolved) {
       statusText = 'Issues Found';
-      cardClass = 'lr'; // red
-      statusColorLabel = 'Issues Found';
+      cardClass = 'lr';
+      badgeClass = 'bgr';
+      badgeLabel = 'Issues Found';
     } else if (hasIssues && isResolved) {
       statusText = 'Issue Resolved';
       cardClass = 'lg';
-      statusColorLabel = 'Issue Resolved';
+      badgeClass = 'bgg';
+      badgeLabel = 'Issue Resolved';
     }
 
     let overdue = false;
@@ -304,13 +303,16 @@ function buildLocations(data) {
       const currentSlot = getCurrentSlot(now);
       if (currentSlot) {
         if (!lastTime || lastTime < currentSlot) {
-          overdue = true;
+          if (!hasIssues || isResolved) {
+            overdue = true;
+          }
         }
       } else {
-        // After 3pm: check if 3pm inspection done
         const threePM = getTodaySlot(now, 15);
         if (now.getHours() >= 15 && (!lastTime || lastTime < threePM)) {
-          overdue = true;
+          if (!hasIssues || isResolved) {
+            overdue = true;
+          }
         }
       }
       const next = getNextInspectionDateTime(now);
@@ -320,9 +322,11 @@ function buildLocations(data) {
       nextDue = next.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
-    if (overdue) {
-      cardClass = 'ly'; // yellow
-      statusColorLabel = 'Inspection Overdue';
+    if (overdue && !(hasIssues && !isResolved)) {
+      cardClass = 'ly';
+      badgeClass = 'bgy';
+      badgeLabel = 'Inspection Overdue';
+      statusText = 'Inspection Overdue';
     }
 
     const card = document.createElement('div');
@@ -330,8 +334,8 @@ function buildLocations(data) {
 
     card.innerHTML = `
       <div class="lname">${loc}</div>
-      <div class="lbadge ${cardClass === 'lg' ? 'bgg' : cardClass === 'lr' ? 'bgr' : 'bgy'}">
-        ${statusColorLabel}
+      <div class="lbadge ${badgeClass}">
+        ${badgeLabel}
       </div>
       <div class="lmeta">
         <span><strong>Last:</strong> ${last.timestamp || ''}</span>
@@ -353,7 +357,8 @@ function buildIssues(data) {
   list.innerHTML = '';
 
   const open = data.filter(r => {
-    const hasIssues = r.issues && String(r.issues).trim() !== '';
+    const issues = (r.issues || '').toString().trim();
+    const hasIssues = issues !== '';
     const isResolved = String(r.resolved).toUpperCase() === 'TRUE';
     return hasIssues && !isResolved;
   });
@@ -412,15 +417,31 @@ function buildInspectors(data) {
   const grid = document.getElementById('inspectorGrid');
   grid.innerHTML = '';
 
-  const byInspector = {};
+  const allInspectors = [
+    'Ken Westenkirchner',
+    'Corey Driver',
+    'Murell Gregory',
+    'Khyle Weirich',
+    'Paris Martin',
+    'Matt Prater',
+    'Micheal Hagmeyer',
+    'Other'
+  ];
+
+  const counts = {};
+  allInspectors.forEach(n => counts[n] = 0);
+
   data.forEach(r => {
-    const name = r.inspector || 'Unknown';
-    if (!byInspector[name]) byInspector[name] = 0;
-    byInspector[name]++;
+    const name = (r.inspector || '').toString().trim();
+    if (!name) return;
+    if (!counts.hasOwnProperty(name)) {
+      counts[name] = 0;
+    }
+    counts[name]++;
   });
 
-  Object.keys(byInspector).forEach(name => {
-    const count = byInspector[name];
+  allInspectors.forEach(name => {
+    const count = counts[name] || 0;
 
     const card = document.createElement('div');
     card.className = 'icard';
@@ -476,6 +497,10 @@ function buildCharts(data) {
   const byHour = {};
 
   data.forEach(r => {
+    const issues = (r.issues || '').toString().trim();
+    const hasIssues = issues !== '';
+    if (!hasIssues) return;
+
     const loc = r.location || 'Auxiliary Gym Locker Room - North Wrestling-Baseball';
     if (!byLoc[loc]) byLoc[loc] = 0;
     byLoc[loc]++;
