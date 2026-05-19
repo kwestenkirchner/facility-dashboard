@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inspection Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=3000" />
+  <link rel="stylesheet" href="style.css?v=4001" />
 </head>
 
 <body>
@@ -33,7 +33,7 @@
   <!-- STATS -->
   <div class="stats">
 
-    <!-- NEW FIRST CARD -->
+    <!-- NEW FIRST CARD: GLOBAL AVG ISSUE TIME -->
     <div class="stat sr">
       <div class="slabel">Avg Issue Time</div>
       <div class="sval" id="avgIssueTime">--:--</div>
@@ -88,7 +88,7 @@
       <table>
         <thead>
           <tr>
-            <th>Date</th>
+            <th>Date/Time</th>
             <th>Inspector</th>
             <th>Location</th>
             <th>Issues</th>
@@ -129,104 +129,143 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbyB4dnmyZ6ryNIX5atAnhf0J1m6HnxDLzadJtdXf0COKaDDY08H0VlL0CZQSOO5KQmi2g/exec";
+// ================== CONFIG ==================
+const API = 'https://script.google.com/macros/s/AKfycbz-MCJGuUWXbCLIySAZiGLAiWe106QopnXbbf0pqmm3YesmR9ZT1SkBgxefw3jnieiVmw/exec';
 
-// CLOCK
+// ================== CLOCK ==================
 function updateClock() {
   const now = new Date();
-  document.getElementById("clock").textContent =
-    now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// TOAST
+// ================== TOAST ==================
 function showToast(msg) {
-  const t = document.getElementById("toast");
+  const t = document.getElementById('toast');
   t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2500);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// LOAD DASHBOARD
+// ================== LOAD DASHBOARD ==================
 async function loadDashboard() {
-  document.getElementById("refreshBtn").disabled = true;
+  try {
+    document.getElementById('refreshBtn').disabled = true;
 
-  const res = await fetch(API + "?action=getAllInspections");
-  const data = await res.json();
+    const res = await fetch(API + '?action=getAllInspections');
+    const data = await res.json();
 
-  buildStats(data);
-  buildLocations(data);
-  buildIssues(data);
-  buildInspectors(data);
-  buildTable(data);
-  buildCharts(data);
+    buildStats(data);
+    buildLocations(data);
+    buildIssues(data);
+    buildInspectors(data);
+    buildTable(data);
+    buildCharts(data);
 
-  document.getElementById("refreshBtn").disabled = false;
-  showToast("Dashboard updated");
+    showToast('Dashboard updated');
+  } catch (err) {
+    console.error(err);
+    showToast('Error loading dashboard');
+  } finally {
+    document.getElementById('refreshBtn').disabled = false;
+  }
 }
 
-// STATS
+// ================== STATS ==================
 function buildStats(data) {
-  document.getElementById("totalInspections").textContent = data.length;
+  document.getElementById('totalInspections').textContent = data.length;
 
-  const open = data.filter(r => r.Resolved !== "TRUE");
-  document.getElementById("openIssues").textContent = open.length;
+  const open = data.filter(r => String(r.resolved).toUpperCase() !== 'TRUE');
+  document.getElementById('openIssues').textContent = open.length;
 
-  const resolved = data.filter(r => r.Resolved === "TRUE");
-  document.getElementById("resolvedCount").textContent = resolved.length;
+  const resolved = data.filter(r => String(r.resolved).toUpperCase() === 'TRUE');
+  document.getElementById('resolvedCount').textContent = resolved.length;
 
-  // NEW: AVG ISSUE TIME
-  const issueTimes = open
+  // GLOBAL AVG ISSUE TIME (all rows with timestamp)
+  const times = data
     .filter(r => r.timestamp)
-    .map(r => new Date(r.timestamp));
+    .map(r => new Date(r.timestamp))
+    .filter(d => !isNaN(d.getTime()));
 
-  if (issueTimes.length === 0) {
-    document.getElementById("avgIssueTime").textContent = "--:--";
+  if (times.length === 0) {
+    document.getElementById('avgIssueTime').textContent = '--:--';
     return;
   }
 
-  const avg =
-    issueTimes.reduce((a, d) => a + d.getHours() + d.getMinutes() / 60, 0) /
-    issueTimes.length;
+  const avgMinutes =
+    times.reduce((sum, d) => sum + d.getHours() * 60 + d.getMinutes(), 0) /
+    times.length;
 
-  const h = Math.floor(avg);
-  const m = Math.round((avg - h) * 60);
+  const h = Math.floor(avgMinutes / 60);
+  const m = Math.round(avgMinutes % 60);
 
   const d = new Date();
   d.setHours(h);
   d.setMinutes(m);
+  d.setSeconds(0);
 
-  document.getElementById("avgIssueTime").textContent =
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  document.getElementById('avgIssueTime').textContent =
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// LOCATION GRID
+// ================== LOCATION GRID ==================
 function buildLocations(data) {
-  const grid = document.getElementById("locationGrid");
-  grid.innerHTML = "";
+  const grid = document.getElementById('locationGrid');
+  grid.innerHTML = '';
 
   const byLoc = {};
   data.forEach(r => {
-    if (!byLoc[r.location]) byLoc[r.location] = [];
-    byLoc[r.location].push(r);
+    const loc = r.location || 'Unknown';
+    if (!byLoc[loc]) byLoc[loc] = [];
+    byLoc[loc].push(r);
   });
 
   Object.keys(byLoc).forEach(loc => {
     const entries = byLoc[loc];
+    entries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     const last = entries[entries.length - 1];
 
-    const card = document.createElement("div");
-    card.className = "lcard " + (last.Resolved === "TRUE" ? "lg" : "lr");
+    // Per-location avg issue time
+    const locTimes = entries
+      .filter(r => r.timestamp)
+      .map(r => new Date(r.timestamp))
+      .filter(d => !isNaN(d.getTime()));
+
+    let avgTimeText = '--:--';
+    if (locTimes.length > 0) {
+      const avgMinutes =
+        locTimes.reduce((sum, d) => sum + d.getHours() * 60 + d.getMinutes(), 0) /
+        locTimes.length;
+
+      const h = Math.floor(avgMinutes / 60);
+      const m = Math.round(avgMinutes % 60);
+
+      const d = new Date();
+      d.setHours(h);
+      d.setMinutes(m);
+      d.setSeconds(0);
+
+      avgTimeText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    const isResolved = String(last.resolved).toUpperCase() === 'TRUE';
+
+    const card = document.createElement('div');
+    card.className = 'lcard ' + (isResolved ? 'lg' : 'lr');
 
     card.innerHTML = `
       <div class="lname">${loc}</div>
-      <div class="lbadge ${last.Resolved === "TRUE" ? "bgg" : "bgr"}">
-        ${last.Resolved === "TRUE" ? "Resolved" : "Issue"}
+      <div class="lbadge ${isResolved ? 'bgg' : 'bgr'}">
+        ${isResolved ? 'Resolved' : 'Issue'}
       </div>
       <div class="lmeta">
-        <span><strong>Last:</strong> ${last.timestamp || ""}</span>
-        <span><strong>By:</strong> ${last.inspector || ""}</span>
+        <span><strong>Last:</strong> ${last.timestamp || ''}</span>
+        <span><strong>By:</strong> ${last.inspector || ''}</span>
+      </div>
+      <div class="lmeta">
+        <span><strong>Avg Issue Time:</strong> ${avgTimeText}</span>
       </div>
     `;
 
@@ -234,12 +273,12 @@ function buildLocations(data) {
   });
 }
 
-// ISSUE LIST
+// ================== ISSUE LIST ==================
 function buildIssues(data) {
-  const list = document.getElementById("issueList");
-  list.innerHTML = "";
+  const list = document.getElementById('issueList');
+  list.innerHTML = '';
 
-  const open = data.filter(r => r.Resolved !== "TRUE");
+  const open = data.filter(r => String(r.resolved).toUpperCase() !== 'TRUE');
 
   if (open.length === 0) {
     list.innerHTML = `<div class="none">No open issues</div>`;
@@ -247,18 +286,18 @@ function buildIssues(data) {
   }
 
   open.forEach(r => {
-    const li = document.createElement("li");
-    li.className = "iitem";
+    const li = document.createElement('li');
+    li.className = 'iitem';
 
     li.innerHTML = `
       <div class="idot"></div>
       <div>
-        <div class="iloc">${r.location}</div>
-        <div class="itype">${r["Issues Found (Select all that apply)"]}</div>
-        <div class="imeta">${r.timestamp}</div>
+        <div class="iloc">${r.location || 'Unknown'}</div>
+        <div class="itype">${r.issues || ''}</div>
+        <div class="imeta">${r.timestamp || ''}</div>
       </div>
       <div class="iactions">
-        <button class="resolve-btn" onclick="resolveIssue('${r.id}')">Resolve</button>
+        <button class="resolve-btn" onclick="resolveIssue(${r.id})">Resolve</button>
       </div>
     `;
 
@@ -266,90 +305,101 @@ function buildIssues(data) {
   });
 }
 
-// RESOLVE ISSUE
+// ================== RESOLVE ISSUE ==================
 async function resolveIssue(id) {
-  await fetch(API, {
-    method: "POST",
-    body: JSON.stringify({ action: "resolveIssue", id })
-  });
-
-  showToast("Issue resolved");
-  loadDashboard();
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'resolveIssue', id })
+    });
+    showToast('Issue resolved');
+    loadDashboard();
+  } catch (err) {
+    console.error(err);
+    showToast('Error resolving issue');
+  }
 }
 
-// INSPECTOR GRID
+// ================== INSPECTOR GRID ==================
 function buildInspectors(data) {
-  const grid = document.getElementById("inspectorGrid");
-  grid.innerHTML = "";
+  const grid = document.getElementById('inspectorGrid');
+  grid.innerHTML = '';
 
   const byInspector = {};
   data.forEach(r => {
-    if (!byInspector[r.inspector]) byInspector[r.inspector] = 0;
-    byInspector[r.inspector]++;
+    const name = r.inspector || 'Unknown';
+    if (!byInspector[name]) byInspector[name] = 0;
+    byInspector[name]++;
   });
 
   Object.keys(byInspector).forEach(name => {
     const count = byInspector[name];
 
-    const card = document.createElement("div");
-    card.className = "icard";
+    const card = document.createElement('div');
+    card.className = 'icard';
 
     card.innerHTML = `
       <div class="iname">${name}</div>
       <div class="inum">${count}</div>
       <div class="isub">Inspections</div>
-      <div class="ibar-w"><div class="ibar" style="width:${Math.min(
-        count * 10,
-        100
-      )}%"></div></div>
+      <div class="ibar-w">
+        <div class="ibar" style="width:${Math.min(count * 10, 100)}%"></div>
+      </div>
     `;
 
     grid.appendChild(card);
   });
 }
 
-// TABLE
+// ================== TABLE ==================
 function buildTable(data) {
-  const tbody = document.getElementById("recentTableBody");
-  tbody.innerHTML = "";
+  const tbody = document.getElementById('recentTableBody');
+  tbody.innerHTML = '';
 
-  data
-    .slice()
-    .reverse()
-    .forEach(r => {
-      const tr = document.createElement("tr");
+  const sorted = data.slice().sort((a, b) => {
+    const da = new Date(a.timestamp);
+    const db = new Date(b.timestamp);
+    return db - da;
+  });
 
-      tr.innerHTML = `
-        <td>${r.timestamp || ""}</td>
-        <td>${r.inspector || ""}</td>
-        <td>${r.location || ""}</td>
-        <td>${r["Issues Found (Select all that apply)"] || ""}</td>
-        <td>${r.Resolved || ""}</td>
-        <td>${r.notes || ""}</td>
-      `;
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
 
-      tbody.appendChild(tr);
-    });
+    tr.innerHTML = `
+      <td>${r.timestamp || ''}</td>
+      <td>${r.inspector || ''}</td>
+      <td>${r.location || ''}</td>
+      <td>${r.issues || ''}</td>
+      <td>${String(r.resolved).toUpperCase() === 'TRUE' ? 'Yes' : 'No'}</td>
+      <td>${r.notes || ''}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
 }
 
-// CHARTS
+// ================== CHARTS ==================
 let chartLocation, chartTime;
 
 function buildCharts(data) {
-  const ctx1 = document.getElementById("chartLocation").getContext("2d");
-  const ctx2 = document.getElementById("chartTime").getContext("2d");
+  const ctx1 = document.getElementById('chartLocation').getContext('2d');
+  const ctx2 = document.getElementById('chartTime').getContext('2d');
 
   const byLoc = {};
   const byHour = {};
 
   data.forEach(r => {
-    if (!byLoc[r.location]) byLoc[r.location] = 0;
-    byLoc[r.location]++;
+    const loc = r.location || 'Unknown';
+    if (!byLoc[loc]) byLoc[loc] = 0;
+    byLoc[loc]++;
 
     if (r.timestamp) {
-      const h = new Date(r.timestamp).getHours();
-      if (!byHour[h]) byHour[h] = 0;
-      byHour[h]++;
+      const d = new Date(r.timestamp);
+      if (!isNaN(d.getTime())) {
+        const h = d.getHours();
+        if (!byHour[h]) byHour[h] = 0;
+        byHour[h]++;
+      }
     }
   });
 
@@ -357,38 +407,50 @@ function buildCharts(data) {
   if (chartTime) chartTime.destroy();
 
   chartLocation = new Chart(ctx1, {
-    type: "bar",
+    type: 'bar',
     data: {
       labels: Object.keys(byLoc),
       datasets: [
         {
-          label: "Issues",
+          label: 'Issues',
           data: Object.values(byLoc),
-          backgroundColor: "#b91c1c"
+          backgroundColor: '#b91c1c'
         }
       ]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
   });
 
+  const hours = Object.keys(byHour)
+    .map(h => Number(h))
+    .sort((a, b) => a - b);
+
   chartTime = new Chart(ctx2, {
-    type: "line",
+    type: 'line',
     data: {
-      labels: Object.keys(byHour),
+      labels: hours.map(h => `${h.toString().padStart(2, '0')}:00`),
       datasets: [
         {
-          label: "Issues",
-          data: Object.values(byHour),
-          borderColor: "#b91c1c",
-          backgroundColor: "rgba(185,28,28,0.2)"
+          label: 'Issues',
+          data: hours.map(h => byHour[h]),
+          borderColor: '#b91c1c',
+          backgroundColor: 'rgba(185,28,28,0.2)',
+          tension: 0.3
         }
       ]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
   });
 }
 
-document.getElementById("refreshBtn").addEventListener("click", loadDashboard);
+// ================== INIT ==================
+document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
 loadDashboard();
 </script>
 
