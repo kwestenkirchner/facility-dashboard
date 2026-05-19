@@ -489,7 +489,7 @@ function buildCharts(data) {
     const issues = (r.issues || '').trim();
     if (!issues) return;
 
-    const loc = r.location;
+    const loc = r.location || 'Unknown';
     if (!byLoc[loc]) byLoc[loc] = 0;
     byLoc[loc]++;
 
