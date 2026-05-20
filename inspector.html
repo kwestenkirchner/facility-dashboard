@@ -3,20 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SFDS Inspector Interface</title>
+  <title>SFDS Inspector Panel</title>
 
   <link rel="stylesheet" href="style.css?v=5001" />
   <link rel="icon" type="image/png" href="sfds-favicon.png" />
 </head>
 
-<body>
-
+<body data-page="inspector">
 <header class="c-header">
   <div class="c-header-bar"></div>
   <div class="c-header-inner">
     <div class="c-header-title">
       <h1>St. Francis de Sales — Inspector Panel</h1>
-      <p>Live Facility Inspection</p>
+      <p>Log inspections and issues in real time</p>
     </div>
 
     <div class="c-header-right">
@@ -24,75 +23,58 @@
         <div class="live-dot"></div>
         LIVE
       </div>
-      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock" id="clockInspector">--:--</div>
     </div>
   </div>
 </header>
 
 <main class="c-main">
 
-  <!-- Inspector selection -->
   <div class="card">
-    <div class="ctitle">Inspector</div>
-    <div class="ing">
-      <div class="icard" style="max-width: 320px;">
-        <div class="isub">Select your name</div>
-        <select id="inspectorSelect" style="width:100%; margin-top:0.5rem; padding:0.4rem;">
-          <option value="">-- Select Inspector --</option>
-          <option>Ken Westenkirchner</option>
-          <option>Corey Driver</option>
-          <option>Murell Gregory</option>
-          <option>Khyle Weirich</option>
-          <option>Paris Martin</option>
-          <option>Matt Prater</option>
-          <option>Micheal Hagmeyer</option>
-          <option>Other</option>
+    <div class="ctitle">Inspector & Location</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="inspectorSelect">Inspector</label>
+        <select id="inspectorSelect">
+          <option value="">Select inspector...</option>
         </select>
-        <button class="rbtn" id="saveInspectorBtn">Use This Name</button>
-        <div class="imeta" id="currentInspectorLabel"></div>
+      </div>
+      <div class="form-field">
+        <label for="locationSelect">Location</label>
+        <select id="locationSelect">
+          <option value="">Select location...</option>
+        </select>
       </div>
     </div>
   </div>
 
-  <!-- Location + Status -->
-  <div class="two">
-    <div class="card">
-      <div class="ctitle">Location</div>
-      <div class="tbl-w">
-        <table>
-          <thead><tr><th>Area</th></tr></thead>
-          <tbody id="locationColumnBody"></tbody>
-        </table>
-      </div>
+  <div class="card">
+    <div class="ctitle">Inspection Status</div>
+    <div class="status-buttons">
+      <button class="status-btn ok" data-status="all_clear">All Clear</button>
+      <button class="status-btn warn" data-status="issues_found">Issues Found</button>
+      <button class="status-btn due" data-status="inspection_due">Inspection Due</button>
     </div>
 
-    <div class="card">
-      <div class="ctitle">Inspection Status</div>
-      <div class="tbl-w">
-        <table>
-          <thead><tr><th>Actions</th></tr></thead>
-          <tbody id="statusColumnBody"></tbody>
-        </table>
-      </div>
+    <div class="form-field">
+      <label for="issueNotes">Notes / Issues</label>
+      <textarea id="issueNotes" rows="4" placeholder="Describe any issues, or leave blank if all clear..."></textarea>
     </div>
+
+    <button class="rbtn primary" id="submitInspectionBtn">Submit Inspection</button>
   </div>
 
-  <!-- Next inspection -->
-  <div class="card" id="nextInspectionCard" style="display:none;">
-    <div class="ctitle">Inspection Complete</div>
-    <p class="ssub" id="nextInspectionText"></p>
+  <div class="card">
+    <div class="ctitle">Next Inspection</div>
+    <div id="nextInspection">No upcoming inspection scheduled.</div>
   </div>
 
-  <div class="foot">SFDS Facilities Inspector Interface</div>
+  <div class="foot">SFDS Inspector Panel</div>
 
 </main>
 
 <div id="toast"></div>
 
-<!-- Your full JS logic preserved exactly -->
-<script>
-/* 100% of your original JS from inspector.html goes here — unchanged */
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
