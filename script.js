@@ -336,7 +336,7 @@ async function submitInspection() {
     return;
   }
 
-  try:
+  try{
     await apiRequest("submitInspection", {
       inspector,
       location,
