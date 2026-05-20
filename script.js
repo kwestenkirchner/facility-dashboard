@@ -1,6 +1,6 @@
 // ====== CONFIG ======
 const API_BASE =
-  "https://script.google.com/macros/s/AKfycbz-MCJGuUWXbCLIySAZiGLAiWe106QopnXbbf0pqmm3YesmR9ZT1SkBgxefw3jnieiVmw/exec";
+  "https://script.google.com/macros/s/AKfycbxwvtChnAW1jP0wfgTNXsnXgkgEjwK51jq-xnwWaD33l81egoRxPIsEiAzIoGOMdhpJIw/exec";
 
 // ====== GENERIC HELPERS ======
 async function apiRequest(action, payload = {}) {
