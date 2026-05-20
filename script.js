@@ -1,444 +1,380 @@
-// ============================================================
-// ST. FRANCIS DE SALES HIGH SCHOOL
-// Facility Inspection System — Google Apps Script  v5
-//
-// CONTAINS:
-//   1. Form submit handler  (email alerts + logging)
-//   2. doGet() web endpoint (secure data feed for dashboard)
-//   3. doPost() endpoint    (resolve issues from dashboard)
-//   4. Trends updater
-// ============================================================
+// ====== CONFIG ======
+const API_BASE =
+  "https://script.google.com/macros/s/AKfycbz-MCJGuUWXbCLIySAZiGLAiWe106QopnXbbf0pqmm3YesmR9ZT1SkBgxefw3jnieiVmw/exec";
 
-// ── CONFIG ───────────────────────────────────────────────────
-const CONFIG = {
-  MAINTENANCE_EMAIL: "kwestenkirchner@sfsknights.org",
-  SCHOOL_NAME:       "St. Francis de Sales High School",
-  RESPONSES_SHEET:   "Form Responses 1",
-  LOG_SHEET:         "Inspection Log",
-  TRENDS_SHEET:      "Trends & Analytics",
-  FROM_NAME:         "SFDS Facilities System",
-};
+// ====== GENERIC HELPERS ======
+async function apiRequest(action, payload = {}) {
+  const body = { action, ...payload };
+  const res = await fetch(API_BASE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error("Network error");
+  return await res.json();
+}
 
-// ── COLUMN POSITIONS in Form Responses sheet (0-indexed) ─────
-const COL = {
-  timestamp:  0,   // A — auto timestamp
-  accessCode: 1,   // B — Staff Access Code
-  inspector:  2,   // C — Your Name
-  location:   3,   // D — Location
-  issues:     4,   // E — Issues Found
-  notes:      5,   // F — Additional Notes
-  photos:     6,   // G — Photo upload
-};
+function showToast(message, type = "info") {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = "";
+  toast.classList.add("toast", `toast-${type}`, "toast-show");
+  setTimeout(() => {
+    toast.classList.remove("toast-show");
+  }, 3000);
+}
 
-// ── PHOTO HELPER ─────────────────────────────────────────────
-// Handles photos stored as a JSON array of full URLs:
-// ["https://drive.google.com/uc?export=view&id=...","https://..."]
-function buildPhotoLinks(rawValue) {
-  if (!rawValue) return [];
-  const str = rawValue.toString().trim();
-  if (!str || str === "No photos") return [];
+function startClock(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  function update() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, "0");
+    const m = now.getMinutes().toString().padStart(2, "0");
+    el.textContent = `${h}:${m}`;
+  }
+  update();
+  setInterval(update, 30000);
+}
 
-  // JSON array of full URLs
-  if (str.startsWith("[")) {
+// ====== SUPERVISOR DASHBOARD ======
+let chartTime = null;
+let chartLocation = null;
+
+async function loadSupervisorData() {
+  try {
+    showToast("Loading dashboard...", "info");
+    const data = await apiRequest("getSupervisorDashboard");
+
+    // Stats
+    document.getElementById("avgIssueTime").textContent =
+      data.stats.avgIssueTime || "--:--";
+    document.getElementById("totalInspections").textContent =
+      data.stats.totalInspections ?? 0;
+    document.getElementById("openIssues").textContent =
+      data.stats.openIssues ?? 0;
+    document.getElementById("resolvedCount").textContent =
+      data.stats.resolvedCount ?? 0;
+
+    // Locations
+    renderLocationGrid(data.locations || []);
+
+    // Issues
+    renderIssueList(data.issues || []);
+
+    // Inspector activity
+    renderInspectorGrid(data.inspectors || []);
+
+    // Recent inspections
+    renderRecentTable(data.recentInspections || []);
+
+    // Charts
+    renderTimeChart(data.issuesByTime || []);
+    renderLocationChart(data.issuesByLocation || []);
+
+    showToast("Dashboard updated", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to load dashboard", "error");
+  }
+}
+
+function renderLocationGrid(locations) {
+  const grid = document.getElementById("locationGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  locations.forEach((loc) => {
+    const card = document.createElement("div");
+    card.className = "loc-card";
+
+    let statusClass = "loc-ok";
+    if (loc.status === "issues") statusClass = "loc-issues";
+    else if (loc.status === "due") statusClass = "loc-due";
+
+    card.innerHTML = `
+      <div class="loc-header">
+        <div class="loc-name">${loc.name}</div>
+        <div class="loc-badge ${statusClass}">
+          ${loc.statusLabel || "OK"}
+        </div>
+      </div>
+      <div class="loc-body">
+        <div class="loc-metric">
+          <span class="loc-label">Open Issues</span>
+          <span class="loc-value">${loc.openIssues ?? 0}</span>
+        </div>
+        <div class="loc-metric">
+          <span class="loc-label">Last Inspection</span>
+          <span class="loc-value">${loc.lastInspection || "—"}</span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderIssueList(issues) {
+  const list = document.getElementById("issueList");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (!issues.length) {
+    const li = document.createElement("li");
+    li.className = "ilist-empty";
+    li.textContent = "No open issues — great job.";
+    list.appendChild(li);
+    return;
+  }
+
+  issues.forEach((issue) => {
+    const li = document.createElement("li");
+    li.className = "ilist-item";
+    li.innerHTML = `
+      <div class="ilist-main">
+        <div class="ilist-title">${issue.location || "Unknown location"}</div>
+        <div class="ilist-sub">${issue.description || "No description"}</div>
+      </div>
+      <div class="ilist-meta">
+        <span class="ilist-time">${issue.time || ""}</span>
+        <button class="mini-btn" data-issue-id="${issue.id}">Resolve</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+
+  list.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-issue-id]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-issue-id");
     try {
-      const arr = JSON.parse(str);
-      if (Array.isArray(arr)) return arr.map(u => u.toString().trim()).filter(Boolean);
-    } catch(e) {}
-  }
-
-  // Single full URL
-  if (str.startsWith("http")) return [str];
-
-  // Fallback: comma-separated file IDs
-  return str.split(",").map(s => s.trim()).filter(Boolean)
-            .map(id => `https://drive.google.com/file/d/${id}/view`);
-}
-
-// ────────────────────────────────────────────────────────────
-// 1. FORM SUBMIT TRIGGER
-// ────────────────────────────────────────────────────────────
-function onFormSubmit(e) {
-  try {
-    const ss        = SpreadsheetApp.getActiveSpreadsheet();
-    const response  = e.response;
-    const answers   = response.getItemResponses();
-    const timestamp = new Date();
-
-    let parsed = {
-      timestamp, location: "", inspector: "",
-      issues: [], notes: "", photoUrls: [],
-    };
-
-    answers.forEach(item => {
-      const q = item.getItem().getTitle().toLowerCase();
-      const a = item.getResponse();
-      if (q.includes("location") || q.includes("restroom") || q.includes("locker"))
-        parsed.location = a;
-      else if (q.includes("your name") || q.includes("inspector"))
-        parsed.inspector = a;
-      else if (q.includes("issue") || q.includes("problem"))
-        parsed.issues = Array.isArray(a) ? a : (a ? [a] : []);
-      else if (q.includes("notes") || q.includes("describe") || q.includes("additional"))
-        parsed.notes = a || "";
-      else if (q.includes("photo") || q.includes("upload") || q.includes("image")) {
-        // Store as JSON array so buildPhotoLinks parses correctly on read-back
-        const raw = Array.isArray(a) ? JSON.stringify(a) : (a || "");
-        parsed.photoUrls = buildPhotoLinks(raw);
-      }
-    });
-
-    const hasIssues = parsed.issues.length > 0 &&
-                      !parsed.issues.every(i => i === "No Issues Found");
-
-    logToSheet(ss, parsed, hasIssues);
-    if (hasIssues) sendAlertEmail(parsed);
-    updateTrends(ss, parsed, hasIssues);
-
-  } catch (err) {
-    Logger.log("onFormSubmit ERROR: " + err.message);
-    MailApp.sendEmail({
-      to:      CONFIG.MAINTENANCE_EMAIL,
-      subject: "⚠️ Inspection System Error",
-      body:    "Error processing a form submission:\n\n" + err.message,
-    });
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-// 2. SECURE WEB ENDPOINT — feeds data to the dashboard
-// ────────────────────────────────────────────────────────────
-function doGet(e) {
-  try {
-    const ss    = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG.RESPONSES_SHEET);
-
-    if (!sheet) {
-      return jsonResponse({ error: "Sheet not found: " + CONFIG.RESPONSES_SHEET });
+      await apiRequest("resolveIssue", { id });
+      showToast("Issue resolved", "success");
+      loadSupervisorData();
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to resolve issue", "error");
     }
-
-    const data   = sheet.getDataRange().getValues();
-    const rows   = data.slice(1);
-    // Pass actual sheet row number (row 2 = first data row) so doPost can resolve by row
-    const parsed = rows
-      .map((row, i) => parseSheetRow(row, i + 2))
-      .filter(Boolean);
-
-    const today     = todayDateStr();
-    const todayRows = parsed.filter(r => r.date === today);
-
-    const locationStatus = {};
-    parsed.forEach(r => {
-      if (!locationStatus[r.location] ||
-          new Date(r.timestamp) > new Date(locationStatus[r.location].timestamp)) {
-        locationStatus[r.location] = r;
-      }
-    });
-
-    const inspectorCounts = {};
-    todayRows.forEach(r => {
-      inspectorCounts[r.inspector] = (inspectorCounts[r.inspector] || 0) + 1;
-    });
-
-    const cutoff     = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const openIssues = parsed
-      .filter(r => r.hasIssue && !r.resolved && new Date(r.timestamp) >= cutoff)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 20);
-
-    const recentLog = parsed.slice(0, 60);
-
-    const hourly = Array(24).fill(0).map(() => ({ clear: 0, issue: 0 }));
-    parsed.forEach(r => {
-      const h = new Date(r.timestamp).getHours();
-      if (r.hasIssue) hourly[h].issue++;
-      else            hourly[h].clear++;
-    });
-
-    const daily = [];
-    for (let d = 13; d >= 0; d--) {
-      const dt = new Date();
-      dt.setDate(dt.getDate() - d);
-      const ds = formatDate(dt);
-      const dr = parsed.filter(r => r.date === ds);
-      daily.push({
-        date:  dt.toLocaleDateString("en-US", { month: "numeric", day: "numeric" }),
-        clear: dr.filter(r => !r.hasIssue).length,
-        issue: dr.filter(r =>  r.hasIssue).length,
-      });
-    }
-
-    const byLocation = {};
-    parsed.forEach(r => {
-      if (!byLocation[r.location]) byLocation[r.location] = 0;
-      if (r.hasIssue) byLocation[r.location]++;
-    });
-
-    const payload = {
-      generated:        new Date().toISOString(),
-      todayCount:       todayRows.length,
-      todayClear:       todayRows.filter(r => !r.hasIssue).length,
-      todayIssues:      todayRows.filter(r =>  r.hasIssue).length,
-      openIssueCount:   openIssues.length,
-      locationsCovered: new Set(todayRows.map(r => r.location)).size,
-      weekCount:        parsed.filter(r => daysSince(new Date(r.timestamp)) < 7).length,
-      locationStatus,
-      inspectorCounts,
-      openIssues,
-      recentLog,
-      hourly,
-      daily,
-      byLocation,
-    };
-
-    return jsonResponse(payload);
-
-  } catch (err) {
-    return jsonResponse({ error: err.message });
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-// 3. doPost() — called by dashboard Resolve button
-//    Uses sheetRow (actual row number in Log sheet) to find
-//    the correct row — avoids timestamp format mismatch issues
-// ────────────────────────────────────────────────────────────
-function doPost(e) {
-  try {
-    const body     = JSON.parse(e.postData.contents);
-    const action   = body.action;
-    const sheetRow = parseInt(body.sheetRow); // actual row number in Log sheet
-
-    if (action === "resolve") {
-      const ss    = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(CONFIG.LOG_SHEET);
-      if (!sheet) return jsonResponse({ error: "Log sheet not found" });
-      if (!sheetRow || sheetRow < 2) return jsonResponse({ error: "Invalid row number" });
-
-      const now = Utilities.formatDate(
-        new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy h:mm a"
-      );
-      sheet.getRange(sheetRow, 11).setValue("✅ Resolved");
-      sheet.getRange(sheetRow, 12).setValue("Kurt W.");
-      sheet.getRange(sheetRow, 13).setValue(now);
-      sheet.getRange(sheetRow, 1, 1, 13).setBackground("#d4edda");
-      sheet.getRange(sheetRow, 11).setFontColor("#155724").setFontWeight("bold");
-
-      return jsonResponse({ success: true });
-    }
-
-    return jsonResponse({ error: "Unknown action" });
-
-  } catch (err) {
-    return jsonResponse({ error: err.message });
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────────────────────────
-function jsonResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// sheetRowNum = actual 1-based row number in the Responses sheet
-function parseSheetRow(row, sheetRowNum) {
-  if (!row || !row[COL.timestamp]) return null;
-  const ts = new Date(row[COL.timestamp]);
-  if (isNaN(ts.getTime())) return null;
-
-  const issueStr = (row[COL.issues] || "").toString().trim();
-  const issues   = issueStr
-    ? issueStr.split(/[,;]\s*/).map(s => s.trim()).filter(Boolean)
-    : [];
-  const hasIssue = issues.length > 0 && !issues.every(i => i === "No Issues Found");
-  const resolved = (row[10] || "").toString().includes("Resolved"); // col K = index 10
-
-  const rawPhotos  = (row[COL.photos] || "").toString().trim();
-  const photoLinks = buildPhotoLinks(rawPhotos);
-
-  return {
-    sheetRow:  sheetRowNum,
-    timestamp: ts.toISOString(),
-    date:      formatDate(ts),
-    time:      ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-    hour:      ts.getHours(),
-    inspector: (row[COL.inspector] || "").toString().trim(),
-    location:  (row[COL.location]  || "").toString().trim(),
-    issues,
-    hasIssue,
-    resolved,
-    notes:     (row[COL.notes] || "").toString().trim(),
-    photos:    photoLinks,
-  };
-}
-
-function todayDateStr() { return formatDate(new Date()); }
-
-function formatDate(dt) {
-  return dt.toLocaleDateString("en-US",
-    { month: "2-digit", day: "2-digit", year: "numeric" });
-}
-
-function daysSince(dt) {
-  return (Date.now() - dt.getTime()) / 86400000;
-}
-
-// ────────────────────────────────────────────────────────────
-// 4. LOG TO INSPECTION LOG SHEET
-// ────────────────────────────────────────────────────────────
-function logToSheet(ss, parsed, hasIssues) {
-  let sheet = ss.getSheetByName(CONFIG.LOG_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(CONFIG.LOG_SHEET);
-    const headers = [
-      "Timestamp","Date","Time","Day of Week",
-      "Location","Inspector","Issues Found","Issue Count",
-      "Notes","Photo Links","Status","Resolved By","Resolution Time"
-    ];
-    const hRange = sheet.getRange(1, 1, 1, headers.length);
-    hRange.setValues([headers]);
-    hRange.setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold");
-    sheet.setFrozenRows(1);
-  }
-
-  const ts      = parsed.timestamp;
-  const timeStr = Utilities.formatDate(ts, Session.getScriptTimeZone(), "h:mm a");
-  const dateStr = Utilities.formatDate(ts, Session.getScriptTimeZone(), "MM/dd/yyyy");
-  const dayStr  = Utilities.formatDate(ts, Session.getScriptTimeZone(), "EEEE");
-  const status  = hasIssues ? "⚠️ Needs Attention" : "✅ All Clear";
-  // Store as JSON array string for reliable round-trip parsing
-  const photoStr = parsed.photoUrls.length > 0
-    ? JSON.stringify(parsed.photoUrls)
-    : "No photos";
-
-  const row = [
-    ts, dateStr, timeStr, dayStr,
-    parsed.location, parsed.inspector,
-    parsed.issues.join("; "), parsed.issues.length,
-    parsed.notes, photoStr,
-    status, "", ""
-  ];
-
-  sheet.appendRow(row);
-
-  const lastRow = sheet.getLastRow();
-  const bg = hasIssues ? "#fff3cd" : "#d4edda";
-  sheet.getRange(lastRow, 1, 1, row.length).setBackground(bg);
-  sheet.getRange(lastRow, 11).setFontColor(hasIssues ? "#856404" : "#155724").setFontWeight("bold");
-}
-
-// ────────────────────────────────────────────────────────────
-// 5. ALERT EMAIL
-// ────────────────────────────────────────────────────────────
-function sendAlertEmail(parsed) {
-  const ts = Utilities.formatDate(
-    parsed.timestamp, Session.getScriptTimeZone(),
-    "EEEE, MMMM d, yyyy 'at' h:mm a"
-  );
-
-  const subject   = `🚨 Facility Issue Reported — ${parsed.location}`;
-  const photoHtml = parsed.photoUrls.length > 0
-    ? `<h3 style="color:#1a3a5c;border-bottom:2px solid #1a3a5c;padding-bottom:5px;margin-top:16px;">📷 Photos</h3>
-       <ul style="padding:0;list-style:none;">
-         ${parsed.photoUrls.map((url, i) =>
-           `<li style="padding:4px 0;"><a href="${url}" style="color:#1a3a5c;font-weight:bold;">View Photo ${i + 1} →</a></li>`
-         ).join("")}
-       </ul>`
-    : "";
-
-  const htmlBody = `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
-     border:1px solid #ddd;border-radius:8px;overflow:hidden;">
-  <div style="background:#1a3a5c;color:white;padding:20px;text-align:center;">
-    <h2 style="margin:0;">🚨 Facility Issue Reported</h2>
-    <p style="margin:5px 0 0;opacity:0.85;">St. Francis de Sales High School — Facilities</p>
-  </div>
-  <div style="background:#fff3cd;border-left:5px solid #b91c1c;padding:14px 18px;margin:16px;">
-    <strong>⚠️ Action Required</strong> — Issues have been reported and require investigation.
-  </div>
-  <div style="padding:0 20px 10px;">
-    <table style="width:100%;border-collapse:collapse;">
-      <tr><td style="padding:8px;font-weight:bold;width:120px;color:#555;">📍 Location</td>
-          <td style="padding:8px;font-size:16px;font-weight:bold;">${parsed.location}</td></tr>
-      <tr style="background:#f8f9fa;">
-          <td style="padding:8px;font-weight:bold;color:#555;">🕐 Reported</td>
-          <td style="padding:8px;">${ts}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;color:#555;">👤 Inspector</td>
-          <td style="padding:8px;">${parsed.inspector}</td></tr>
-    </table>
-    <h3 style="color:#b91c1c;border-bottom:2px solid #b91c1c;padding-bottom:5px;margin-top:16px;">
-      Issues Identified</h3>
-    <ul style="list-style:none;padding:0;">
-      ${parsed.issues.map(i =>
-        `<li style="padding:6px 0;border-bottom:1px solid #eee;">⚠️ ${i}</li>`
-      ).join("")}
-    </ul>
-    ${photoHtml}
-    ${parsed.notes ? `
-    <h3 style="border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:16px;">📝 Notes</h3>
-    <p style="background:#f8f9fa;padding:10px;border-radius:4px;">${parsed.notes}</p>` : ""}
-  </div>
-  <div style="background:#f8f9fa;padding:12px;text-align:center;
-       font-size:11px;color:#888;border-top:1px solid #ddd;">
-    Automated message · St. Francis de Sales Facility Inspection System
-  </div>
-</div>`;
-
-  MailApp.sendEmail({
-    to:       CONFIG.MAINTENANCE_EMAIL,
-    subject,
-    htmlBody,
-    name: CONFIG.FROM_NAME,
   });
 }
 
-// ────────────────────────────────────────────────────────────
-// 6. TRENDS SHEET
-// ────────────────────────────────────────────────────────────
-function updateTrends(ss, parsed, hasIssues) {
-  let sheet = ss.getSheetByName(CONFIG.TRENDS_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(CONFIG.TRENDS_SHEET);
-    sheet.getRange("A1").setValue("TRENDS & ANALYTICS — Auto-Generated")
-         .setFontSize(13).setFontWeight("bold").setFontColor("#1a3a5c");
-    const headers = ["Location","Total Checks","Issues Reported","Issue Rate %"];
-    const hRange  = sheet.getRange(3, 1, 1, 4);
-    hRange.setValues([headers]);
-    hRange.setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold");
-    sheet.setFrozenRows(3);
-  }
+function renderInspectorGrid(inspectors) {
+  const grid = document.getElementById("inspectorGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
 
-  const data = sheet.getDataRange().getValues();
-  let rowIdx = -1;
-  for (let i = 3; i < data.length; i++) {
-    if (data[i][0] === parsed.location) { rowIdx = i + 1; break; }
-  }
-
-  if (rowIdx === -1) {
-    const nr = sheet.getLastRow() + 1;
-    sheet.getRange(nr, 1).setValue(parsed.location);
-    sheet.getRange(nr, 2).setValue(1);
-    sheet.getRange(nr, 3).setValue(hasIssues ? 1 : 0);
-    sheet.getRange(nr, 4).setFormula(`=IF(B${nr}=0,0,C${nr}/B${nr}*100)`)
-         .setNumberFormat("0.0\"%\"");
-  } else {
-    sheet.getRange(rowIdx, 2).setValue((sheet.getRange(rowIdx, 2).getValue() || 0) + 1);
-    sheet.getRange(rowIdx, 3).setValue(
-      (sheet.getRange(rowIdx, 3).getValue() || 0) + (hasIssues ? 1 : 0)
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-// 7. ONE-TIME SETUP — run once manually after pasting script
-// ────────────────────────────────────────────────────────────
-function setupFormTrigger() {
-  ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === "onFormSubmit") ScriptApp.deleteTrigger(t);
+  inspectors.forEach((ins) => {
+    const card = document.createElement("div");
+    card.className = "insp-card";
+    card.innerHTML = `
+      <div class="insp-name">${ins.name}</div>
+      <div class="insp-row">
+        <span class="insp-label">Inspections</span>
+        <span class="insp-value">${ins.inspections ?? 0}</span>
+      </div>
+      <div class="insp-row">
+        <span class="insp-label">Open Issues</span>
+        <span class="insp-value">${ins.openIssues ?? 0}</span>
+      </div>
+    `;
+    grid.appendChild(card);
   });
-  const form = FormApp.openByUrl("https://docs.google.com/forms/d/1NqM4VzYqgct8mvS3Z-XDP604Lpy7iwM5sLE094BxWUA/edit");
-  ScriptApp.newTrigger("onFormSubmit").forForm(form).onFormSubmit().create();
-  Logger.log("✅ Form submit trigger created.");
 }
+
+function renderRecentTable(rows) {
+  const tbody = document.getElementById("recentTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  rows.forEach((r) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.datetime || ""}</td>
+      <td>${r.inspector || ""}</td>
+      <td>${r.location || ""}</td>
+      <td>${r.issues || ""}</td>
+      <td>${r.resolved || ""}</td>
+      <td>${r.notes || ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTimeChart(data) {
+  const ctx = document.getElementById("chartTime");
+  if (!ctx) return;
+
+  const labels = data.map((d) => d.label);
+  const values = data.map((d) => d.count);
+
+  if (chartTime) chartTime.destroy();
+  chartTime = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Issues",
+          data: values,
+          backgroundColor: "rgba(56, 189, 248, 0.6)",
+          borderColor: "rgba(56, 189, 248, 1)",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#e5e7eb" } },
+        y: { ticks: { color: "#e5e7eb" } },
+      },
+    },
+  });
+}
+
+function renderLocationChart(data) {
+  const ctx = document.getElementById("chartLocation");
+  if (!ctx) return;
+
+  const labels = data.map((d) => d.label);
+  const values = data.map((d) => d.count);
+
+  if (chartLocation) chartLocation.destroy();
+  chartLocation = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Issues",
+          data: values,
+          backgroundColor: "rgba(52, 211, 153, 0.6)",
+          borderColor: "rgba(52, 211, 153, 1)",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#e5e7eb" } },
+        y: { ticks: { color: "#e5e7eb" } },
+      },
+    },
+  });
+}
+
+// ====== INSPECTOR PANEL ======
+let currentStatus = null;
+
+async function loadInspectorData() {
+  try {
+    showToast("Loading inspector panel...", "info");
+    const data = await apiRequest("getInspectorConfig");
+
+    const inspectorSelect = document.getElementById("inspectorSelect");
+    const locationSelect = document.getElementById("locationSelect");
+    const nextInspection = document.getElementById("nextInspection");
+
+    inspectorSelect.innerHTML =
+      '<option value="">Select inspector...</option>';
+    (data.inspectors || []).forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      inspectorSelect.appendChild(opt);
+    });
+
+    locationSelect.innerHTML =
+      '<option value="">Select location...</option>';
+    (data.locations || []).forEach((loc) => {
+      const opt = document.createElement("option");
+      opt.value = loc;
+      opt.textContent = loc;
+      locationSelect.appendChild(opt);
+    });
+
+    nextInspection.textContent =
+      data.nextInspection || "No upcoming inspection scheduled.";
+
+    showToast("Inspector panel ready", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to load inspector panel", "error");
+  }
+}
+
+function initStatusButtons() {
+  const buttons = document.querySelectorAll(".status-btn");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("status-selected"));
+      btn.classList.add("status-selected");
+      currentStatus = btn.getAttribute("data-status");
+    });
+  });
+}
+
+async function submitInspection() {
+  const inspector = document.getElementById("inspectorSelect").value;
+  const location = document.getElementById("locationSelect").value;
+  const notes = document.getElementById("issueNotes").value.trim();
+
+  if (!inspector) {
+    showToast("Select an inspector", "error");
+    return;
+  }
+  if (!location) {
+    showToast("Select a location", "error");
+    return;
+  }
+  if (!currentStatus) {
+    showToast("Choose a status (All Clear / Issues Found / Inspection Due)", "error");
+    return;
+  }
+
+  try:
+    await apiRequest("submitInspection", {
+      inspector,
+      location,
+      status: currentStatus,
+      notes,
+    });
+    showToast("Inspection submitted", "success");
+    document.getElementById("issueNotes").value = "";
+    currentStatus = null;
+    document
+      .querySelectorAll(".status-btn")
+      .forEach((b) => b.classList.remove("status-selected"));
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to submit inspection", "error");
+  }
+}
+
+// ====== PAGE ROUTER ======
+document.addEventListener("DOMContentLoaded", () => {
+  const page = document.body.dataset.page;
+
+  if (page === "supervisor") {
+    startClock("clock");
+    const refreshBtn = document.getElementById("refreshBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", loadSupervisorData);
+    }
+    loadSupervisorData();
+  }
+
+  if (page === "inspector") {
+    startClock("clockInspector");
+    initStatusButtons();
+    const submitBtn = document.getElementById("submitInspectionBtn");
+    if (submitBtn) {
+      submitBtn.addEventListener("click", submitInspection);
+    }
+    loadInspectorData();
+  }
+});
