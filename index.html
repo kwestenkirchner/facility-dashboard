@@ -1,53 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
 
-<meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+  <title>Facility Inspection Dashboard</title>
 
-<title>
-Supervisor Dashboard
-</title>
-
-<link rel="stylesheet"
-      href="style.css">
-
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
 <header>
 
-  <div class="topbar"></div>
+  <div class="header-bar"></div>
 
   <div class="header-inner">
 
     <div class="header-title">
-
-      <h1>
-        🏫 Facility Inspection Dashboard
-      </h1>
-
-      <p>
-        Supervisor View
-      </p>
-
+      <h1>🏫 Facility Inspection Dashboard</h1>
+      <p>Supervisor Portal</p>
     </div>
 
     <div class="header-right">
 
-      <div class="clock"
-           id="liveClock">
+      <div class="live-pill">
+        <span class="live-dot"></span>
+        LIVE
       </div>
+
+      <div class="clock" id="clock">--:--</div>
 
       <button
         class="refresh-btn"
-        onclick="loadSupervisorDashboard()">
-
-        Refresh
-
+        onclick="loadSupervisorDashboard()"
+      >
+        ↻ Refresh
       </button>
 
     </div>
@@ -56,117 +47,115 @@ Supervisor Dashboard
 
 </header>
 
-<div id="toast"></div>
-
 <main>
 
   <!-- STATS -->
-
   <div class="stats-grid">
 
     <div class="stat-card">
-
       <div class="stat-label">
-        Total Inspections
+        Total Inspections Today
       </div>
 
-      <div class="stat-value"
-           id="totalInspections">
+      <div
+        class="stat-value"
+        id="stat-total"
+      >
+        0
       </div>
-
     </div>
 
-
-    <div class="stat-card">
-
+    <div class="stat-card green">
       <div class="stat-label">
-        Resolved Issues
+        All Clear
       </div>
 
-      <div class="stat-value"
-           id="resolvedIssues">
+      <div
+        class="stat-value"
+        id="stat-clear"
+      >
+        0
       </div>
-
     </div>
 
-
-    <div class="stat-card">
-
+    <div class="stat-card red">
       <div class="stat-label">
         Open Issues
       </div>
 
-      <div class="stat-value"
-           id="openIssues">
+      <div
+        class="stat-value"
+        id="stat-open"
+      >
+        0
       </div>
-
     </div>
 
   </div>
 
-
   <!-- COUNTDOWN -->
+  <div class="countdown-box">
 
-  <div class="countdown"
-       id="countdownBox">
+    Next Inspection Window:
+    <span id="next-window"></span>
+
   </div>
-
 
   <!-- AREA STATUS -->
-
   <div class="section-title">
-    Area Status
+    📍 Area Status
   </div>
 
-  <div class="area-grid"
-       id="locationCards">
-  </div>
-
+  <div
+    class="area-grid"
+    id="area-grid"
+  ></div>
 
   <!-- AVERAGE ISSUE TIMES -->
-
   <div class="section-title">
-    Average Time Issues Reported
+    ⏰ Average Issue Time by Area
   </div>
 
-  <div class="avg-grid"
-       id="issueAverageCards">
-  </div>
+  <div
+    class="average-grid"
+    id="average-grid"
+  ></div>
 
-
-  <!-- OPEN ISSUES TABLE -->
-
+  <!-- OPEN ISSUES -->
   <div class="section-title">
-    Open Issues
+    🚨 Open Issues
   </div>
 
-  <div class="table-wrap">
+  <div class="table-card">
 
     <table>
 
       <thead>
-
         <tr>
-
-          <th>Date</th>
-          <th>Time</th>
-          <th>Location</th>
+          <th>Timestamp</th>
           <th>Inspector</th>
+          <th>Location</th>
           <th>Issues</th>
           <th>Notes</th>
           <th>Asana</th>
           <th>Resolve</th>
-
         </tr>
-
       </thead>
 
-      <tbody id="issueLogBody">
-
+      <tbody id="issues-body">
+        <tr>
+          <td colspan="7" class="empty">
+            Loading...
+          </td>
+        </tr>
       </tbody>
 
     </table>
 
+  </div>
+
+  <div class="footer">
+    Facility Dashboard — Auto Refresh Every 15 Seconds
   </div>
 
 </main>
@@ -174,9 +163,7 @@ Supervisor Dashboard
 <script src="script.js"></script>
 
 <script>
-
 initializeSupervisorPage();
-
 </script>
 
 </body>
