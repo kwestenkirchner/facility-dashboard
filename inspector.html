@@ -1,1 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
+  <title>Facility Inspections — Inspector</title>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <div class="header-bar"></div>
+
+  <div class="header-inner">
+
+    <div class="header-title">
+      <h1>🏫 Facility Inspection System</h1>
+      <p>Inspector Portal</p>
+    </div>
+
+    <div class="header-right">
+      <div class="live-pill">
+        <span class="live-dot"></span>
+        LIVE
+      </div>
+
+      <div class="clock" id="clock">--:--</div>
+    </div>
+
+  </div>
+</header>
+
+<main>
+
+  <!-- LOGIN -->
+  <div class="login-wrapper" id="login-wrapper">
+
+    <div class="login-card">
+
+      <h2>Select Inspector</h2>
+
+      <select id="inspector-select">
+        <option value="">Choose Inspector...</option>
+      </select>
+
+    </div>
+
+  </div>
+
+  <!-- INSPECTION PAGE -->
+  <div class="inspection-wrapper" id="inspection-wrapper">
+
+    <div class="countdown-box">
+      Active Inspector:
+      <span class="active-inspector" id="active-inspector"></span>
+
+      <br /><br />
+
+      Next Inspection Window:
+      <span id="next-window"></span>
+    </div>
+
+    <div class="section-title">
+      📍 Inspection Areas
+    </div>
+
+    <div
+      class="inspection-grid"
+      id="inspection-grid"
+    ></div>
+
+  </div>
+
+</main>
+
+<script src="script.js"></script>
+
+<script>
+initializeInspectorPage();
+</script>
+
+</body>
+</html>
