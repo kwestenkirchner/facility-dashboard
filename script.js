@@ -1,16 +1,12 @@
-/* =========================================================
-   script.js
-   ST. FRANCIS DE SALES FACILITY INSPECTION SYSTEM
-========================================================= */
+/*************************************************
+ * FACILITY INSPECTION DASHBOARD — SCRIPT.JS
+ *************************************************/
 
 const API_URL =
-"https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec";
+  "https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec";
 
-const INSPECTION_WINDOWS = [
-  9,10,11,12,13,14,15
-];
-
-const AUTO_REFRESH_MS = 15000;
+const FORM_BASE =
+  "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform";
 
 const LOCATIONS = [
   "3rd Floor Restroom",
@@ -25,119 +21,372 @@ const LOCATIONS = [
   "Swim Locker Room"
 ];
 
-const DEFAULT_INSPECTORS = [
-  "Ken Westenkirchner",
-  "Matt Prater",
-  "Corey Driver",
-  "Murell Gregory",
-  "Khyle Weirich",
-  "Paris Martin",
-  "Michael Hagmeyer",
-  "Other"
+const INSPECTION_WINDOWS = [
+  9, 10, 11, 12, 13, 14, 15
 ];
 
-let inspections = [];
-let refreshTimer = null;
+const AUTO_REFRESH_MS = 15000;
 
+let dashboardData = [];
 
-/* =========================================================
-   UTILITIES
-========================================================= */
+/*************************************************
+ * PAGE DETECTION
+ *************************************************/
+document.addEventListener("DOMContentLoaded", () => {
 
-function formatTime(date) {
-  return new Date(date).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit'
+  if (document.body.classList.contains("inspector-page")) {
+    initializeInspectorPage();
+  }
+
+  if (document.body.classList.contains("supervisor-page")) {
+    initializeSupervisorPage();
+  }
+
+});
+
+/*************************************************
+ * CLOCK
+ *************************************************/
+setInterval(() => {
+
+  const clock = document.getElementById("live-clock");
+
+  if (!clock) return;
+
+  clock.textContent =
+    new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+}, 1000);
+
+/*************************************************
+ * INSPECTOR PAGE
+ *************************************************/
+function initializeInspectorPage() {
+
+  const savedInspector =
+    localStorage.getItem("facilityInspector");
+
+  if (savedInspector) {
+    showInspectionGrid(savedInspector);
+  }
+
+  buildInspectorDropdown();
+
+}
+
+/*************************************************
+ * INSPECTOR DROPDOWN
+ *************************************************/
+function buildInspectorDropdown() {
+
+  const select =
+    document.getElementById("inspector-select");
+
+  if (!select) return;
+
+  const defaultOption =
+    `<option value="">Select Your Name</option>`;
+
+  const options =
+    [
+      "Ken Westenkirchner",
+      "Matt Prater",
+      "Corey Driver",
+      "Murell Gregory",
+      "Khyle Weirich",
+      "Paris Martin",
+      "Michael Hagmeyer",
+      "Other"
+    ]
+      .map(name =>
+        `<option value="${name}">${name}</option>`
+      )
+      .join("");
+
+  select.innerHTML =
+    defaultOption + options;
+
+  select.addEventListener("change", () => {
+
+    const value = select.value;
+
+    if (!value) return;
+
+    if (value === "Other") {
+
+      const custom =
+        prompt("Enter your full name:");
+
+      if (!custom) return;
+
+      localStorage.setItem(
+        "facilityInspector",
+        custom
+      );
+
+      showInspectionGrid(custom);
+
+      return;
+    }
+
+    localStorage.setItem(
+      "facilityInspector",
+      value
+    );
+
+    showInspectionGrid(value);
+
   });
+
 }
 
-function formatDate(date) {
-  return new Date(date).toLocaleDateString();
+/*************************************************
+ * SHOW INSPECTION GRID
+ *************************************************/
+function showInspectionGrid(name) {
+
+  const loginWrap =
+    document.getElementById("login-wrapper");
+
+  const gridWrap =
+    document.getElementById("inspection-wrapper");
+
+  if (loginWrap) loginWrap.style.display = "none";
+
+  if (gridWrap) gridWrap.style.display = "block";
+
+  const inspectorLabel =
+    document.getElementById("active-inspector");
+
+  if (inspectorLabel) {
+    inspectorLabel.textContent = name;
+  }
+
+  renderInspectionCards();
+
+  updateInspectionCountdown();
+
+  setInterval(updateInspectionCountdown, 1000);
+
 }
 
-function isToday(date) {
-  const d = new Date(date);
-  const n = new Date();
+/*************************************************
+ * RENDER INSPECTION CARDS
+ *************************************************/
+function renderInspectionCards() {
 
-  return (
-    d.getDate() === n.getDate() &&
-    d.getMonth() === n.getMonth() &&
-    d.getFullYear() === n.getFullYear()
+  const container =
+    document.getElementById("inspection-grid");
+
+  if (!container) return;
+
+  const completed =
+    JSON.parse(
+      localStorage.getItem("inspectionStatus") || "{}"
+    );
+
+  container.innerHTML =
+    LOCATIONS.map(location => {
+
+      const state = completed[location];
+
+      let actionHTML = `
+        <button class="clear-btn"
+          onclick="markClear('${location}')">
+          All Clear
+        </button>
+
+        <button class="issue-btn"
+          onclick="reportIssue('${location}')">
+          Issues Found
+        </button>
+      `;
+
+      if (state === "clear") {
+        actionHTML = `
+          <div class="status-complete green">
+            ✓ All Clear
+          </div>
+        `;
+      }
+
+      if (state === "issue") {
+        actionHTML = `
+          <div class="status-complete red">
+            ✓ Issue Reported
+          </div>
+        `;
+      }
+
+      return `
+        <div class="inspection-card">
+
+          <div class="inspection-location">
+            ${location}
+          </div>
+
+          <div class="inspection-actions">
+            ${actionHTML}
+          </div>
+
+        </div>
+      `;
+
+    }).join("");
+
+}
+
+/*************************************************
+ * MARK CLEAR
+ *************************************************/
+function markClear(location) {
+
+  const completed =
+    JSON.parse(
+      localStorage.getItem("inspectionStatus") || "{}"
+    );
+
+  completed[location] = "clear";
+
+  localStorage.setItem(
+    "inspectionStatus",
+    JSON.stringify(completed)
   );
+
+  renderInspectionCards();
+
 }
 
-function currentWindowHour() {
+/*************************************************
+ * REPORT ISSUE
+ *************************************************/
+function reportIssue(location) {
 
-  const now = new Date();
+  const inspector =
+    localStorage.getItem("facilityInspector") || "";
 
-  return now.getHours();
+  const formURL =
+    `${FORM_BASE}
+?usp=pp_url
+&entry.1456245431=${encodeURIComponent(inspector)}
+&entry.1739126018=${encodeURIComponent(location)}
+&entry.1237607443=
+`;
+
+  const completed =
+    JSON.parse(
+      localStorage.getItem("inspectionStatus") || "{}"
+    );
+
+  completed[location] = "issue";
+
+  localStorage.setItem(
+    "inspectionStatus",
+    JSON.stringify(completed)
+  );
+
+  window.location.href = formURL;
+
 }
 
-function getCurrentWindowKey() {
-
-  const now = new Date();
-
-  return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
-}
-
-function showToast(msg) {
-
-  const toast =
-    document.getElementById("toast");
-
-  if (!toast) return;
-
-  toast.innerText = msg;
-
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3000);
-}
-
-
-/* =========================================================
-   CLOCK
-========================================================= */
-
-function startClock() {
+/*************************************************
+ * COUNTDOWN
+ *************************************************/
+function updateInspectionCountdown() {
 
   const el =
-    document.getElementById("liveClock");
+    document.getElementById("inspection-countdown");
 
   if (!el) return;
 
-  setInterval(() => {
+  const now = new Date();
 
-    el.innerText =
-      new Date().toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+  const currentHour = now.getHours();
 
-  }, 1000);
+  const nextWindow =
+    INSPECTION_WINDOWS.find(
+      h => h > currentHour
+    );
+
+  if (!nextWindow) {
+    el.textContent =
+      "Final inspection window completed.";
+    return;
+  }
+
+  const target =
+    new Date();
+
+  target.setHours(nextWindow);
+  target.setMinutes(0);
+  target.setSeconds(0);
+
+  const diff =
+    target.getTime() - now.getTime();
+
+  const mins =
+    Math.floor(diff / 60000);
+
+  const hrs =
+    Math.floor(mins / 60);
+
+  const rem =
+    mins % 60;
+
+  el.textContent =
+    `Next inspection window: ${hrs}h ${rem}m`;
+
 }
 
+/*************************************************
+ * RESETS
+ *************************************************/
+setInterval(() => {
 
-/* =========================================================
-   SUPERVISOR
-========================================================= */
+  const now = new Date();
 
-async function initializeSupervisorPage() {
+  const mins = now.getMinutes();
 
-  startClock();
+  if (mins === 0) {
+    localStorage.removeItem("inspectionStatus");
+  }
 
-  await loadSupervisorDashboard();
+}, 60000);
 
-  refreshTimer = setInterval(
+setInterval(() => {
+
+  const now = new Date();
+
+  if (
+    now.getHours() === 0 &&
+    now.getMinutes() === 0
+  ) {
+    localStorage.removeItem("inspectionStatus");
+  }
+
+}, 60000);
+
+/*************************************************
+ * SUPERVISOR PAGE
+ *************************************************/
+function initializeSupervisorPage() {
+
+  loadSupervisorDashboard();
+
+  setInterval(
     loadSupervisorDashboard,
     AUTO_REFRESH_MS
   );
+
 }
 
-
+/*************************************************
+ * LOAD DASHBOARD
+ *************************************************/
 async function loadSupervisorDashboard() {
 
   const res =
@@ -145,645 +394,366 @@ async function loadSupervisorDashboard() {
       `${API_URL}?action=getAllInspections`
     );
 
-  inspections =
-    await res.json();
+  dashboardData = await res.json();
 
-  renderStats();
-  renderLocationCards();
-  renderIssueAverageCards();
+  renderSupervisorStats();
+
+  renderAreaCards();
+
   renderIssueLog();
-  renderCountdown();
+
+  renderAverageIssueCards();
+
 }
 
+/*************************************************
+ * REFRESH BUTTON
+ *************************************************/
+function refreshDashboard() {
+  loadSupervisorDashboard();
+}
 
-function renderStats() {
+/*************************************************
+ * SUPERVISOR STATS
+ *************************************************/
+function renderSupervisorStats() {
 
   const total =
-    inspections.length;
-
-  const resolved =
-    inspections.filter(
-      x => x.resolved
-    ).length;
+    dashboardData.length;
 
   const unresolved =
-    inspections.filter(
-      x => !x.resolved &&
-           x.issues
+    dashboardData.filter(
+      r => r.hasIssue && !r.resolved
     ).length;
 
-  setText("totalInspections", total);
-  setText("resolvedIssues", resolved);
-  setText("openIssues", unresolved);
+  const resolved =
+    dashboardData.filter(
+      r => r.resolved
+    ).length;
+
+  setText("stat-total", total);
+  setText("stat-open", unresolved);
+  setText("stat-resolved", resolved);
+
 }
 
-
-function renderLocationCards() {
+/*************************************************
+ * AREA STATUS CARDS
+ *************************************************/
+function renderAreaCards() {
 
   const wrap =
-    document.getElementById(
-      "locationCards"
-    );
+    document.getElementById("area-grid");
 
   if (!wrap) return;
 
-  wrap.innerHTML = "";
+  wrap.innerHTML =
+    LOCATIONS.map(location => {
 
-  LOCATIONS.forEach(location => {
-
-    const relevant =
-      inspections.filter(
-        x => x.location === location
-      );
-
-    const unresolved =
-      relevant.find(
-        x => !x.resolved && x.issues
-      );
-
-    const latest =
-      relevant.sort(
-        (a,b)=>
-          new Date(b.timestamp) -
-          new Date(a.timestamp)
-      )[0];
-
-    let cls = "gray";
-
-    let status =
-      "No Inspection Recorded";
-
-    let meta = "";
-
-    if (unresolved) {
-
-      cls = "red";
-
-      status =
-        "Issue Reported";
-
-      meta =
-        unresolved.issues;
-    }
-
-    else if (latest) {
-
-      const ts =
-        new Date(latest.timestamp);
-
-      const mins =
-        (Date.now() - ts.getTime()) /
-        60000;
-
-      if (mins > 60) {
-
-        cls = "yellow";
-
-        status = "OVERDUE";
-
-        meta =
-          `Last Inspection:
-          ${formatTime(ts)}
-          · ${latest.inspector}`;
-      }
-
-      else {
-
-        cls = "green";
-
-        status = "All Clear";
-
-        meta =
-          `Last Inspection:
-          ${formatTime(ts)}
-          · ${latest.inspector}`;
-      }
-    }
-
-    wrap.innerHTML += `
-      <div class="area-card ${cls}">
-        <div class="area-name">
-          ${location}
-        </div>
-
-        <div class="area-status">
-          ${status}
-        </div>
-
-        <div class="area-meta">
-          ${meta}
-        </div>
-      </div>
-    `;
-  });
-}
-
-
-/* =========================================================
-   ISSUE AVERAGE CARDS
-========================================================= */
-
-function renderIssueAverageCards() {
-
-  const wrap =
-    document.getElementById(
-      "issueAverageCards"
-    );
-
-  if (!wrap) return;
-
-  wrap.innerHTML = "";
-
-  LOCATIONS.forEach(location => {
-
-    const issues =
-      inspections.filter(x =>
-        x.location === location &&
-        x.issues
-      );
-
-    if (!issues.length) return;
-
-    const avg =
-      issues.reduce((sum,x)=>{
-
-        return (
-          sum +
-          new Date(x.timestamp).getHours()
+      const rows =
+        dashboardData.filter(
+          r => r.location === location
         );
 
-      },0) / issues.length;
+      const latest =
+        rows.sort(
+          (a, b) =>
+            new Date(b.timestamp) -
+            new Date(a.timestamp)
+        )[0];
 
-    let hour =
-      Math.round(avg);
+      if (!latest) {
 
-    let label =
-      hour > 12
-      ? `${hour-12}:00 PM`
-      : `${hour}:00 AM`;
+        return `
+          <div class="area-card gray">
+            <div class="area-name">
+              ${location}
+            </div>
 
-    wrap.innerHTML += `
-      <div class="avg-card">
-        <div class="avg-location">
-          ${location}
+            <div class="area-status">
+              No Inspections Recorded
+            </div>
+          </div>
+        `;
+      }
+
+      const unresolved =
+        rows.find(
+          r => r.hasIssue && !r.resolved
+        );
+
+      let statusClass = "green";
+      let statusText = "All Clear";
+
+      if (unresolved) {
+        statusClass = "red";
+        statusText = "Open Issue";
+      }
+
+      const overdue =
+        isInspectionOverdue(latest.timestamp);
+
+      if (!unresolved && overdue) {
+        statusClass = "yellow";
+        statusText = "Overdue";
+      }
+
+      return `
+        <div class="area-card ${statusClass}">
+
+          <div class="area-name">
+            ${location}
+          </div>
+
+          <div class="area-status">
+            ${statusText}
+          </div>
+
+          <div class="area-meta">
+            Last Inspection:
+            ${formatDate(latest.timestamp)}
+            <br>
+            ${latest.inspector}
+          </div>
+
         </div>
+      `;
 
-        <div class="avg-count">
-          ${issues.length}
-          Issues
-        </div>
+    }).join("");
 
-        <div class="avg-time">
-          Avg Reported:
-          ${label}
-        </div>
-      </div>
-    `;
-  });
 }
 
+/*************************************************
+ * OVERDUE CHECK
+ *************************************************/
+function isInspectionOverdue(timestamp) {
 
-/* =========================================================
-   ISSUE LOG
-========================================================= */
+  const ts = new Date(timestamp);
 
+  const diff =
+    (Date.now() - ts.getTime()) / 60000;
+
+  return diff > 75;
+
+}
+
+/*************************************************
+ * ISSUE LOG
+ *************************************************/
 function renderIssueLog() {
 
-  const body =
-    document.getElementById(
-      "issueLogBody"
+  const tbody =
+    document.getElementById("issue-log");
+
+  if (!tbody) return;
+
+  const unresolved =
+    dashboardData.filter(
+      r => r.hasIssue && !r.resolved
     );
 
-  if (!body) return;
+  if (!unresolved.length) {
 
-  body.innerHTML = "";
-
-  const issues =
-    inspections.filter(x =>
-      x.issues &&
-      !x.resolved
-    );
-
-  if (!issues.length) {
-
-    body.innerHTML =
-      `<tr>
-        <td colspan="8">
-          No open issues
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" class="empty">
+          No Open Issues
         </td>
-      </tr>`;
+      </tr>
+    `;
 
     return;
   }
 
-  issues.forEach(row => {
+  tbody.innerHTML =
+    unresolved.map(r => {
 
-    body.innerHTML += `
-      <tr>
+      return `
+        <tr>
 
-        <td>
-          ${formatDate(row.timestamp)}
-        </td>
+          <td>${formatDate(r.timestamp)}</td>
 
-        <td>
-          ${formatTime(row.timestamp)}
-        </td>
+          <td>${r.inspector}</td>
 
-        <td>
-          ${row.location}
-        </td>
+          <td>${r.location}</td>
 
-        <td>
-          ${row.inspector}
-        </td>
+          <td>${r.issues}</td>
 
-        <td>
-          ${row.issues}
-        </td>
+          <td>${r.notes || "-"}</td>
 
-        <td>
-          ${row.notes || ""}
-        </td>
+          <td>
+            ${
+              r.addedToAsana
+                ? `<span class="asana-complete">
+                    ✓ Asana
+                  </span>`
+                : `
+                  <button class="asana-btn"
+                    onclick="markAsana(${r.id})">
+                    Added to Asana
+                  </button>
+                `
+            }
+          </td>
 
-        <td>
+          <td>
+            <button class="resolve-btn"
+              onclick="resolveIssue(${r.id})">
+              Resolve
+            </button>
+          </td>
 
-          ${
-            row.asana
-            ? `
-              <span class="asana-complete">
-                ✔ Asana
-              </span>
-            `
-            : `
-              <button
-                class="asana-btn"
-                onclick="markAsana(${row.id})"
-              >
-                Added to Asana
-              </button>
-            `
-          }
+        </tr>
+      `;
 
-        </td>
+    }).join("");
 
-        <td>
-
-          <button
-            class="resolve-btn"
-            onclick="resolveIssue(${row.id})"
-          >
-            Resolve
-          </button>
-
-        </td>
-
-      </tr>
-    `;
-  });
 }
 
-
-/* =========================================================
-   RESOLVE
-========================================================= */
-
+/*************************************************
+ * RESOLVE ISSUE
+ *************************************************/
 async function resolveIssue(id) {
 
   await fetch(API_URL, {
-
     method: "POST",
-
     body: JSON.stringify({
-
       action: "resolveIssue",
-
       id
-
     })
   });
 
-  showToast("Issue resolved");
+  loadSupervisorDashboard();
 
-  await loadSupervisorDashboard();
 }
 
-
-/* =========================================================
-   ASANA
-========================================================= */
-
+/*************************************************
+ * MARK ASANA
+ *************************************************/
 async function markAsana(id) {
 
   await fetch(API_URL, {
-
     method: "POST",
-
     body: JSON.stringify({
-
       action: "markAsana",
-
       id
-
     })
   });
 
-  showToast("Marked for Asana");
+  loadSupervisorDashboard();
 
-  await loadSupervisorDashboard();
 }
 
-
-/* =========================================================
-   COUNTDOWN
-========================================================= */
-
-function renderCountdown() {
-
-  const el =
-    document.getElementById(
-      "countdownBox"
-    );
-
-  if (!el) return;
-
-  const now =
-    new Date();
-
-  const next =
-    INSPECTION_WINDOWS.find(
-      h => h > now.getHours()
-    );
-
-  if (!next) {
-
-    el.innerHTML =
-      "Inspection windows complete for today";
-
-    return;
-  }
-
-  const nextDate =
-    new Date();
-
-  nextDate.setHours(next);
-  nextDate.setMinutes(0);
-  nextDate.setSeconds(0);
-
-  const diff =
-    nextDate - now;
-
-  const mins =
-    Math.floor(diff / 60000);
-
-  el.innerHTML =
-    `Next Inspection Window:
-    ${formatTime(nextDate)}
-    (${mins} min)`;
-}
-
-
-/* =========================================================
-   INSPECTOR PAGE
-========================================================= */
-
-function initializeInspectorPage() {
-
-  startClock();
-
-  populateInspectors();
-
-  restoreInspector();
-
-  renderInspectionBoard();
-
-  setInterval(() => {
-    renderInspectionBoard();
-  }, 30000);
-}
-
-
-function populateInspectors() {
-
-  const sel =
-    document.getElementById(
-      "inspectorSelect"
-    );
-
-  if (!sel) return;
-
-  const stored =
-    JSON.parse(
-      localStorage.getItem(
-        "extraInspectors"
-      ) || "[]"
-    );
-
-  const names =
-    [...DEFAULT_INSPECTORS, ...stored];
-
-  sel.innerHTML =
-    `<option value="">
-      Select Inspector
-    </option>`;
-
-  names.forEach(name => {
-
-    sel.innerHTML += `
-      <option value="${name}">
-        ${name}
-      </option>
-    `;
-  });
-}
-
-
-function handleInspectorSelect() {
-
-  const sel =
-    document.getElementById(
-      "inspectorSelect"
-    );
-
-  if (sel.value === "Other") {
-
-    const name =
-      prompt(
-        "Enter Inspector Name"
-      );
-
-    if (!name) return;
-
-    const existing =
-      JSON.parse(
-        localStorage.getItem(
-          "extraInspectors"
-        ) || "[]"
-      );
-
-    existing.push(name);
-
-    localStorage.setItem(
-      "extraInspectors",
-      JSON.stringify(existing)
-    );
-
-    localStorage.setItem(
-      "activeInspector",
-      name
-    );
-
-    location.reload();
-
-    return;
-  }
-
-  localStorage.setItem(
-    "activeInspector",
-    sel.value
-  );
-}
-
-
-function restoreInspector() {
-
-  const name =
-    localStorage.getItem(
-      "activeInspector"
-    );
-
-  const sel =
-    document.getElementById(
-      "inspectorSelect"
-    );
-
-  if (!sel || !name) return;
-
-  sel.value = name;
-}
-
-
-function renderInspectionBoard() {
+/*************************************************
+ * AVERAGE ISSUE TIME
+ *************************************************/
+function renderAverageIssueCards() {
 
   const wrap =
-    document.getElementById(
-      "inspectionBoard"
-    );
+    document.getElementById("average-issue-grid");
 
   if (!wrap) return;
 
-  wrap.innerHTML = "";
+  const html =
+    LOCATIONS.map(location => {
 
-  const inspector =
-    localStorage.getItem(
-      "activeInspector"
-    );
+      const issues =
+        dashboardData.filter(
+          r =>
+            r.location === location &&
+            r.hasIssue
+        );
 
-  LOCATIONS.forEach(location => {
+      if (!issues.length) {
 
-    const key =
-      `${getCurrentWindowKey()}-${location}`;
+        return `
+          <div class="avg-card">
+            <div class="avg-title">
+              ${location}
+            </div>
 
-    const state =
-      localStorage.getItem(key);
+            <div class="avg-value">
+              —
+            </div>
 
-    let actions = "";
+            <div class="avg-sub">
+              No issues reported
+            </div>
+          </div>
+        `;
+      }
 
-    if (state === "clear") {
+      const avg =
+        issues.reduce((sum, r) => {
 
-      actions =
-        `<div class="check-green">
-          ✔ All Clear
-        </div>`;
-    }
+          return (
+            sum +
+            new Date(r.timestamp).getHours()
+          );
 
-    else if (state === "issue") {
+        }, 0) / issues.length;
 
-      actions =
-        `<div class="check-red">
-          ✔ Issue Reported
-        </div>`;
-    }
+      const avgHour =
+        Math.round(avg);
 
-    else {
+      const display =
+        formatHour(avgHour);
 
-      actions = `
-        <button
-          class="clear-btn"
-          onclick="markClear('${location}')"
-        >
-          All Clear
-        </button>
+      return `
+        <div class="avg-card">
 
-        <button
-          class="issue-btn"
-          onclick="reportIssue('${location}')"
-        >
-          Issues Found
-        </button>
+          <div class="avg-title">
+            ${location}
+          </div>
+
+          <div class="avg-value">
+            ${display}
+          </div>
+
+          <div class="avg-sub">
+            ${issues.length} total issues
+          </div>
+
+        </div>
       `;
-    }
 
-    wrap.innerHTML += `
-      <div class="inspection-row">
+    }).join("");
 
-        <div class="inspection-location">
-          ${location}
-        </div>
+  wrap.innerHTML = html;
 
-        <div class="inspection-actions">
-          ${actions}
-        </div>
-
-      </div>
-    `;
-  });
 }
 
-
-function markClear(location) {
-
-  const key =
-    `${getCurrentWindowKey()}-${location}`;
-
-  localStorage.setItem(
-    key,
-    "clear"
-  );
-
-  renderInspectionBoard();
-}
-
-
-function reportIssue(location) {
-
-  const inspector =
-    localStorage.getItem(
-      "activeInspector"
-    );
-
-  const key =
-    `${getCurrentWindowKey()}-${location}`;
-
-  localStorage.setItem(
-    key,
-    "issue"
-  );
-
-  const url =
-    `${API_URL}?action=openIssueForm` +
-    `&inspector=${encodeURIComponent(inspector)}` +
-    `&location=${encodeURIComponent(location)}`;
-
-  window.location.href = url;
-}
-
-
-function setText(id,val) {
+/*************************************************
+ * HELPERS
+ *************************************************/
+function setText(id, value) {
 
   const el =
     document.getElementById(id);
 
-  if (el) {
-    el.innerText = val;
-  }
+  if (!el) return;
+
+  el.textContent = value;
+
+}
+
+function formatDate(date) {
+
+  return new Date(date)
+    .toLocaleString();
+
+}
+
+function formatHour(hour) {
+
+  const suffix =
+    hour >= 12 ? "PM" : "AM";
+
+  const normalized =
+    hour > 12
+      ? hour - 12
+      : hour;
+
+  return `${normalized}:00 ${suffix}`;
+
 }
