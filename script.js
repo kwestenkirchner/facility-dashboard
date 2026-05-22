@@ -12,13 +12,8 @@ const LOCATIONS = [
   "3rd Floor Restroom",
   "2nd Floor Restroom",
   "Cafeteria Mens Restroom",
-  "Cafeteria Womens Restroom",
-  "West Lobby Mens Restroom",
-  "West Lobby Womens Restroom",
-  "Auxiliary Locker Room 1 - North",
-  "Auxiliary Locker Room 2 - South",
-  "7th and 8th Grade Locker Room",
-  "Swim Locker Room"
+  "Auxiliary Locker Room 1 - North Wrestling Baseball Locker Room",
+  "Auxiliary Locker Room 2 - South Gym Locker Room"
 ];
 
 const INSPECTION_WINDOWS = [
