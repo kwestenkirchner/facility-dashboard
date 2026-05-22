@@ -1,7 +1,3 @@
-/*************************************************
- * FACILITY INSPECTION DASHBOARD — SCRIPT.JS
- *************************************************/
-
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec";
 
@@ -13,601 +9,591 @@ const LOCATIONS = [
   "2nd Floor Restroom",
   "Cafeteria Mens Restroom",
   "Auxiliary Locker Room 1 - North Wrestling Baseball Locker Room",
-  "Auxiliary Locker Room 2 - South Gym Locker Room"
+  "Auxiliary Locker Room 2 - South Aux Gym Locker Room"
 ];
 
-const INSPECTION_WINDOWS = [
-  9, 10, 11, 12, 13, 14, 15
+const INSPECTORS = [
+  "Ken Westenkirchner",
+  "Matt Prater",
+  "Corey Driver",
+  "Murell Gregory",
+  "Khyle Weirich",
+  "Paris Martin",
+  "Michael Hagmeyer",
+  "Other"
 ];
 
-const AUTO_REFRESH_MS = 15000;
+let ALL_DATA = [];
 
-let dashboardData = [];
+function startClock() {
 
-/*************************************************
- * PAGE DETECTION
- *************************************************/
-document.addEventListener("DOMContentLoaded", () => {
+  function updateClock() {
 
-  if (document.body.classList.contains("inspector-page")) {
-    initializeInspectorPage();
+    const el = document.getElementById("clock");
+
+    if (!el) return;
+
+    el.textContent =
+      new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+
   }
 
-  if (document.body.classList.contains("supervisor-page")) {
-    initializeSupervisorPage();
-  }
+  updateClock();
 
-});
-
-/*************************************************
- * CLOCK
- *************************************************/
-setInterval(() => {
-
-  const clock = document.getElementById("live-clock");
-
-  if (!clock) return;
-
-  clock.textContent =
-    new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit"
-    });
-
-}, 1000);
-
-/*************************************************
- * INSPECTOR PAGE
- *************************************************/
-function initializeInspectorPage() {
-
-  const savedInspector =
-    localStorage.getItem("facilityInspector");
-
-  if (savedInspector) {
-    showInspectionGrid(savedInspector);
-  }
-
-  buildInspectorDropdown();
+  setInterval(updateClock, 1000);
 
 }
 
-/*************************************************
- * INSPECTOR DROPDOWN
- *************************************************/
-function buildInspectorDropdown() {
+/************************************************
+ * INSPECTOR PAGE
+ ************************************************/
+
+function initializeInspectorPage() {
+
+  startClock();
+
+  populateInspectorDropdown();
+
+  setupInspectorSelection();
+
+  updateNextWindow();
+
+  setInterval(updateNextWindow, 1000);
+
+}
+
+function populateInspectorDropdown() {
 
   const select =
     document.getElementById("inspector-select");
 
   if (!select) return;
 
-  const defaultOption =
-    `<option value="">Select Your Name</option>`;
+  INSPECTORS.forEach(name => {
 
-  const options =
-    [
-      "Ken Westenkirchner",
-      "Matt Prater",
-      "Corey Driver",
-      "Murell Gregory",
-      "Khyle Weirich",
-      "Paris Martin",
-      "Michael Hagmeyer",
-      "Other"
-    ]
-      .map(name =>
-        `<option value="${name}">${name}</option>`
-      )
-      .join("");
+    const opt = document.createElement("option");
 
-  select.innerHTML =
-    defaultOption + options;
+    opt.value = name;
+    opt.textContent = name;
 
-  select.addEventListener("change", () => {
-
-    const value = select.value;
-
-    if (!value) return;
-
-    if (value === "Other") {
-
-      const custom =
-        prompt("Enter your full name:");
-
-      if (!custom) return;
-
-      localStorage.setItem(
-        "facilityInspector",
-        custom
-      );
-
-      showInspectionGrid(custom);
-
-      return;
-    }
-
-    localStorage.setItem(
-      "facilityInspector",
-      value
-    );
-
-    showInspectionGrid(value);
+    select.appendChild(opt);
 
   });
 
 }
 
-/*************************************************
- * SHOW INSPECTION GRID
- *************************************************/
-function showInspectionGrid(name) {
+function setupInspectorSelection() {
 
-  const loginWrap =
-    document.getElementById("login-wrapper");
+  const select =
+    document.getElementById("inspector-select");
 
-  const gridWrap =
-    document.getElementById("inspection-wrapper");
+  select.addEventListener("change", () => {
 
-  if (loginWrap) loginWrap.style.display = "none";
+    let inspector = select.value;
 
-  if (gridWrap) gridWrap.style.display = "block";
+    if (!inspector) return;
 
-  const inspectorLabel =
-    document.getElementById("active-inspector");
+    if (inspector === "Other") {
 
-  if (inspectorLabel) {
-    inspectorLabel.textContent = name;
+      inspector = prompt(
+        "Enter Inspector Name"
+      );
+
+      if (!inspector) return;
+
+    }
+
+    localStorage.setItem(
+      "facilityInspector",
+      inspector
+    );
+
+    launchInspectorView(inspector);
+
+  });
+
+  const existing =
+    localStorage.getItem("facilityInspector");
+
+  if (existing) {
+
+    launchInspectorView(existing);
+
   }
-
-  renderInspectionCards();
-
-  updateInspectionCountdown();
-
-  setInterval(updateInspectionCountdown, 1000);
 
 }
 
-/*************************************************
- * RENDER INSPECTION CARDS
- *************************************************/
-function renderInspectionCards() {
+function launchInspectorView(inspector) {
 
-  const container =
+  document.getElementById(
+    "login-wrapper"
+  ).style.display = "none";
+
+  document.getElementById(
+    "inspection-wrapper"
+  ).style.display = "block";
+
+  document.getElementById(
+    "active-inspector"
+  ).textContent = inspector;
+
+  renderInspectionCards(inspector);
+
+}
+
+function renderInspectionCards(inspector) {
+
+  const grid =
     document.getElementById("inspection-grid");
 
-  if (!container) return;
+  if (!grid) return;
 
   const completed =
     JSON.parse(
-      localStorage.getItem("inspectionStatus") || "{}"
+      localStorage.getItem("inspectionStatuses") || "{}"
     );
 
-  container.innerHTML =
-    LOCATIONS.map(location => {
+  grid.innerHTML = "";
 
-      const state = completed[location];
+  LOCATIONS.forEach(location => {
 
-      let actionHTML = `
-        <button class="clear-btn"
-          onclick="markClear('${location}')">
+    const card =
+      document.createElement("div");
+
+    card.className = "inspection-card";
+
+    const status = completed[location];
+
+    let actions = "";
+
+    if (!status) {
+
+      actions = `
+        <button
+          class="clear-btn"
+          onclick="markAllClear('${location}')"
+        >
           All Clear
         </button>
 
-        <button class="issue-btn"
-          onclick="reportIssue('${location}')">
+        <button
+          class="issue-btn"
+          onclick="reportIssue('${location}')"
+        >
           Issues Found
         </button>
       `;
 
-      if (state === "clear") {
-        actionHTML = `
-          <div class="status-complete green">
-            ✓ All Clear
-          </div>
-        `;
-      }
+    } else if (status === "clear") {
 
-      if (state === "issue") {
-        actionHTML = `
-          <div class="status-complete red">
-            ✓ Issue Reported
-          </div>
-        `;
-      }
-
-      return `
-        <div class="inspection-card">
-
-          <div class="inspection-location">
-            ${location}
-          </div>
-
-          <div class="inspection-actions">
-            ${actionHTML}
-          </div>
-
+      actions = `
+        <div class="status-complete green">
+          ✅ All Clear
         </div>
       `;
 
-    }).join("");
+    } else {
+
+      actions = `
+        <div class="status-complete red">
+          🚨 Issues Reported
+        </div>
+      `;
+
+    }
+
+    card.innerHTML = `
+      <div class="inspection-location">
+        ${location}
+      </div>
+
+      <div class="inspection-actions">
+        ${actions}
+      </div>
+    `;
+
+    grid.appendChild(card);
+
+  });
 
 }
 
-/*************************************************
- * MARK CLEAR
- *************************************************/
-function markClear(location) {
+function markAllClear(location) {
 
-  const completed =
+  const inspector =
+    localStorage.getItem("facilityInspector");
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "submitInspection",
+      inspector,
+      location,
+      issues: "No Issues Found",
+      notes: ""
+    })
+  });
+
+  const statuses =
     JSON.parse(
-      localStorage.getItem("inspectionStatus") || "{}"
+      localStorage.getItem("inspectionStatuses") || "{}"
     );
 
-  completed[location] = "clear";
+  statuses[location] = "clear";
 
   localStorage.setItem(
-    "inspectionStatus",
-    JSON.stringify(completed)
+    "inspectionStatuses",
+    JSON.stringify(statuses)
   );
 
-  renderInspectionCards();
+  renderInspectionCards(inspector);
 
 }
 
-/*************************************************
- * REPORT ISSUE
- *************************************************/
 function reportIssue(location) {
 
   const inspector =
-    localStorage.getItem("facilityInspector") || "";
+    localStorage.getItem("facilityInspector");
 
-  const formURL =
-    `${FORM_BASE}
-?usp=pp_url
-&entry.1456245431=${encodeURIComponent(inspector)}
-&entry.1739126018=${encodeURIComponent(location)}
-&entry.1237607443=
-`;
+  const url =
+    FORM_BASE +
+    `?entry.1456245431=${encodeURIComponent(inspector)}` +
+    `&entry.1739126018=${encodeURIComponent(location)}`;
 
-  const completed =
+  const statuses =
     JSON.parse(
-      localStorage.getItem("inspectionStatus") || "{}"
+      localStorage.getItem("inspectionStatuses") || "{}"
     );
 
-  completed[location] = "issue";
+  statuses[location] = "issue";
 
   localStorage.setItem(
-    "inspectionStatus",
-    JSON.stringify(completed)
+    "inspectionStatuses",
+    JSON.stringify(statuses)
   );
 
-  window.location.href = formURL;
+  window.open(url, "_blank");
+
+  renderInspectionCards(inspector);
 
 }
 
-/*************************************************
- * COUNTDOWN
- *************************************************/
-function updateInspectionCountdown() {
-
-  const el =
-    document.getElementById("inspection-countdown");
-
-  if (!el) return;
-
-  const now = new Date();
-
-  const currentHour = now.getHours();
-
-  const nextWindow =
-    INSPECTION_WINDOWS.find(
-      h => h > currentHour
-    );
-
-  if (!nextWindow) {
-    el.textContent =
-      "Final inspection window completed.";
-    return;
-  }
-
-  const target =
-    new Date();
-
-  target.setHours(nextWindow);
-  target.setMinutes(0);
-  target.setSeconds(0);
-
-  const diff =
-    target.getTime() - now.getTime();
-
-  const mins =
-    Math.floor(diff / 60000);
-
-  const hrs =
-    Math.floor(mins / 60);
-
-  const rem =
-    mins % 60;
-
-  el.textContent =
-    `Next inspection window: ${hrs}h ${rem}m`;
-
-}
-
-/*************************************************
- * RESETS
- *************************************************/
-setInterval(() => {
-
-  const now = new Date();
-
-  const mins = now.getMinutes();
-
-  if (mins === 0) {
-    localStorage.removeItem("inspectionStatus");
-  }
-
-}, 60000);
-
-setInterval(() => {
-
-  const now = new Date();
-
-  if (
-    now.getHours() === 0 &&
-    now.getMinutes() === 0
-  ) {
-    localStorage.removeItem("inspectionStatus");
-  }
-
-}, 60000);
-
-/*************************************************
+/************************************************
  * SUPERVISOR PAGE
- *************************************************/
-function initializeSupervisorPage() {
+ ************************************************/
 
-  loadSupervisorDashboard();
+async function initializeSupervisorPage() {
 
-  setInterval(
-    loadSupervisorDashboard,
-    AUTO_REFRESH_MS
-  );
+  startClock();
+
+  updateNextWindow();
+
+  setInterval(updateNextWindow, 1000);
+
+  await loadSupervisorDashboard();
+
+  setInterval(loadSupervisorDashboard, 15000);
 
 }
 
-/*************************************************
- * LOAD DASHBOARD
- *************************************************/
 async function loadSupervisorDashboard() {
 
   const res =
     await fetch(
-      `${API_URL}?action=getAllInspections`
+      API_URL + "?action=getAllInspections"
     );
 
-  dashboardData = await res.json();
+  const data = await res.json();
 
-  renderSupervisorStats();
+  data.sort((a, b) => {
+    return (
+      new Date(b.timestamp) -
+      new Date(a.timestamp)
+    );
+  });
 
-  renderAreaCards();
+  ALL_DATA = data;
 
-  renderIssueLog();
+  renderStats(data);
 
-  renderAverageIssueCards();
+  renderAreaGrid(data);
+
+  renderAverageIssueCards(data);
+
+  renderOpenIssues(data);
 
 }
 
-/*************************************************
- * REFRESH BUTTON
- *************************************************/
-function refreshDashboard() {
-  loadSupervisorDashboard();
-}
+function renderStats(data) {
 
-/*************************************************
- * SUPERVISOR STATS
- *************************************************/
-function renderSupervisorStats() {
+  const today =
+    new Date().toDateString();
 
-  const total =
-    dashboardData.length;
+  const todayRows =
+    data.filter(r =>
+      new Date(r.timestamp).toDateString() === today
+    );
 
-  const unresolved =
-    dashboardData.filter(
-      r => r.hasIssue && !r.resolved
+  const open =
+    data.filter(r =>
+      r.issues &&
+      r.issues !== "No Issues Found" &&
+      !r.resolvedAt
+    );
+
+  document.getElementById(
+    "stat-total"
+  ).textContent = todayRows.length;
+
+  document.getElementById(
+    "stat-clear"
+  ).textContent =
+    todayRows.filter(r =>
+      r.issues === "No Issues Found"
     ).length;
 
-  const resolved =
-    dashboardData.filter(
-      r => r.resolved
-    ).length;
-
-  setText("stat-total", total);
-  setText("stat-open", unresolved);
-  setText("stat-resolved", resolved);
+  document.getElementById(
+    "stat-open"
+  ).textContent = open.length;
 
 }
 
-/*************************************************
- * AREA STATUS CARDS
- *************************************************/
-function renderAreaCards() {
+function renderAreaGrid(data) {
 
-  const wrap =
+  const grid =
     document.getElementById("area-grid");
 
-  if (!wrap) return;
+  grid.innerHTML = "";
 
-  wrap.innerHTML =
-    LOCATIONS.map(location => {
+  LOCATIONS.forEach(location => {
 
-      const rows =
-        dashboardData.filter(
-          r => r.location === location
-        );
+    const rows =
+      data.filter(r =>
+        r.location === location
+      );
 
-      const latest =
-        rows.sort(
-          (a, b) =>
-            new Date(b.timestamp) -
-            new Date(a.timestamp)
-        )[0];
+    const latest = rows[0];
 
-      if (!latest) {
+    const unresolved =
+      rows.find(r =>
+        r.issues &&
+        r.issues !== "No Issues Found" &&
+        !r.resolvedAt
+      );
 
-        return `
-          <div class="area-card gray">
-            <div class="area-name">
-              ${location}
-            </div>
+    let cls = "gray";
+    let status = "No Inspections Recorded";
 
-            <div class="area-status">
-              No Inspections Recorded
-            </div>
-          </div>
-        `;
-      }
+    if (unresolved) {
 
-      const unresolved =
-        rows.find(
-          r => r.hasIssue && !r.resolved
-        );
+      cls = "red";
+      status = "Issue Reported";
 
-      let statusClass = "green";
-      let statusText = "All Clear";
+    } else if (latest) {
 
-      if (unresolved) {
-        statusClass = "red";
-        statusText = "Open Issue";
-      }
+      cls = "green";
+      status = "All Clear";
 
-      const overdue =
-        isInspectionOverdue(latest.timestamp);
+    }
 
-      if (!unresolved && overdue) {
-        statusClass = "yellow";
-        statusText = "Overdue";
-      }
+    const card =
+      document.createElement("div");
 
-      return `
-        <div class="area-card ${statusClass}">
+    card.className =
+      `area-card ${cls}`;
 
-          <div class="area-name">
-            ${location}
-          </div>
+    card.innerHTML = `
+      <div class="area-name">
+        ${location}
+      </div>
 
-          <div class="area-status">
-            ${statusText}
-          </div>
+      <div class="area-status">
+        ${status}
+      </div>
 
-          <div class="area-meta">
+      <div class="area-meta">
+        ${
+          latest
+            ? `
             Last Inspection:
-            ${formatDate(latest.timestamp)}
+            ${new Date(
+              latest.timestamp
+            ).toLocaleString()}
             <br>
+            Inspector:
             ${latest.inspector}
-          </div>
+          `
+            : "No inspection yet"
+        }
+      </div>
+    `;
 
-        </div>
-      `;
+    grid.appendChild(card);
 
-    }).join("");
-
-}
-
-/*************************************************
- * OVERDUE CHECK
- *************************************************/
-function isInspectionOverdue(timestamp) {
-
-  const ts = new Date(timestamp);
-
-  const diff =
-    (Date.now() - ts.getTime()) / 60000;
-
-  return diff > 75;
+  });
 
 }
 
-/*************************************************
- * ISSUE LOG
- *************************************************/
-function renderIssueLog() {
+function renderAverageIssueCards(data) {
+
+  const grid =
+    document.getElementById("average-grid");
+
+  grid.innerHTML = "";
+
+  LOCATIONS.forEach(location => {
+
+    const rows =
+      data.filter(r =>
+        r.location === location &&
+        r.issues &&
+        r.issues !== "No Issues Found"
+      );
+
+    let avgText = "No Issues";
+
+    if (rows.length > 0) {
+
+      const avg =
+        rows.reduce((sum, r) => {
+
+          const d = new Date(r.timestamp);
+
+          return (
+            sum +
+            d.getHours() +
+            d.getMinutes() / 60
+          );
+
+        }, 0) / rows.length;
+
+      const h = Math.floor(avg);
+
+      const m = Math.round((avg - h) * 60);
+
+      const dt = new Date();
+
+      dt.setHours(h);
+      dt.setMinutes(m);
+
+      avgText =
+        dt.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit"
+        });
+
+    }
+
+    const card =
+      document.createElement("div");
+
+    card.className = "avg-card";
+
+    card.innerHTML = `
+      <div class="avg-title">
+        ${location}
+      </div>
+
+      <div class="avg-value">
+        ${avgText}
+      </div>
+
+      <div class="avg-sub">
+        Total Issues:
+        ${rows.length}
+      </div>
+    `;
+
+    grid.appendChild(card);
+
+  });
+
+}
+
+function renderOpenIssues(data) {
 
   const tbody =
-    document.getElementById("issue-log");
+    document.getElementById("issues-body");
 
-  if (!tbody) return;
+  const rows =
+    data
+      .filter(r =>
+        r.issues &&
+        r.issues !== "No Issues Found" &&
+        !r.resolvedAt
+      )
+      .slice(0, 50);
 
-  const unresolved =
-    dashboardData.filter(
-      r => r.hasIssue && !r.resolved
-    );
-
-  if (!unresolved.length) {
+  if (!rows.length) {
 
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="empty">
+        <td colspan="7" class="empty">
           No Open Issues
         </td>
       </tr>
     `;
 
     return;
+
   }
 
-  tbody.innerHTML =
-    unresolved.map(r => {
+  tbody.innerHTML = rows.map(r => `
 
-      return `
-        <tr>
+    <tr>
 
-          <td>${formatDate(r.timestamp)}</td>
+      <td>
+        ${new Date(
+          r.timestamp
+        ).toLocaleString()}
+      </td>
 
-          <td>${r.inspector}</td>
+      <td>${r.inspector}</td>
 
-          <td>${r.location}</td>
+      <td>${r.location}</td>
 
-          <td>${r.issues}</td>
+      <td>${r.issues}</td>
 
-          <td>${r.notes || "-"}</td>
+      <td>${r.notes || ""}</td>
 
-          <td>
-            ${
-              r.addedToAsana
-                ? `<span class="asana-complete">
-                    ✓ Asana
-                  </span>`
-                : `
-                  <button class="asana-btn"
-                    onclick="markAsana(${r.id})">
-                    Added to Asana
-                  </button>
-                `
-            }
-          </td>
+      <td>
+        ${
+          r.asana
+            ? `
+              <div class="asana-complete">
+                ✅ Asana
+              </div>
+            `
+            : `
+              <button
+                class="asana-btn"
+                onclick="markAsana(${r.id})"
+              >
+                Added to Asana
+              </button>
+            `
+        }
+      </td>
 
-          <td>
-            <button class="resolve-btn"
-              onclick="resolveIssue(${r.id})">
-              Resolve
-            </button>
-          </td>
+      <td>
+        <button
+          class="resolve-btn"
+          onclick="resolveIssue(${r.id})"
+        >
+          Resolve
+        </button>
+      </td>
 
-        </tr>
-      `;
+    </tr>
 
-    }).join("");
+  `).join("");
 
 }
 
-/*************************************************
- * RESOLVE ISSUE
- *************************************************/
 async function resolveIssue(id) {
 
   await fetch(API_URL, {
@@ -622,9 +608,6 @@ async function resolveIssue(id) {
 
 }
 
-/*************************************************
- * MARK ASANA
- *************************************************/
 async function markAsana(id) {
 
   await fetch(API_URL, {
@@ -639,116 +622,35 @@ async function markAsana(id) {
 
 }
 
-/*************************************************
- * AVERAGE ISSUE TIME
- *************************************************/
-function renderAverageIssueCards() {
-
-  const wrap =
-    document.getElementById("average-issue-grid");
-
-  if (!wrap) return;
-
-  const html =
-    LOCATIONS.map(location => {
-
-      const issues =
-        dashboardData.filter(
-          r =>
-            r.location === location &&
-            r.hasIssue
-        );
-
-      if (!issues.length) {
-
-        return `
-          <div class="avg-card">
-            <div class="avg-title">
-              ${location}
-            </div>
-
-            <div class="avg-value">
-              —
-            </div>
-
-            <div class="avg-sub">
-              No issues reported
-            </div>
-          </div>
-        `;
-      }
-
-      const avg =
-        issues.reduce((sum, r) => {
-
-          return (
-            sum +
-            new Date(r.timestamp).getHours()
-          );
-
-        }, 0) / issues.length;
-
-      const avgHour =
-        Math.round(avg);
-
-      const display =
-        formatHour(avgHour);
-
-      return `
-        <div class="avg-card">
-
-          <div class="avg-title">
-            ${location}
-          </div>
-
-          <div class="avg-value">
-            ${display}
-          </div>
-
-          <div class="avg-sub">
-            ${issues.length} total issues
-          </div>
-
-        </div>
-      `;
-
-    }).join("");
-
-  wrap.innerHTML = html;
-
-}
-
-/*************************************************
- * HELPERS
- *************************************************/
-function setText(id, value) {
+function updateNextWindow() {
 
   const el =
-    document.getElementById(id);
+    document.getElementById("next-window");
 
   if (!el) return;
 
-  el.textContent = value;
+  const now = new Date();
 
-}
+  const next = new Date();
 
-function formatDate(date) {
+  next.setMinutes(0);
+  next.setSeconds(0);
 
-  return new Date(date)
-    .toLocaleString();
+  next.setHours(now.getHours() + 1);
 
-}
+  const diff =
+    next - now;
 
-function formatHour(hour) {
+  const mins =
+    Math.floor(diff / 60000);
 
-  const suffix =
-    hour >= 12 ? "PM" : "AM";
+  const secs =
+    Math.floor((diff % 60000) / 1000);
 
-  const normalized =
-    hour > 12
-      ? hour - 12
-      : hour;
-
-  return `${normalized}:00 ${suffix}`;
+  el.textContent =
+    `${next.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    })} (${mins}m ${secs}s)`;
 
 }
