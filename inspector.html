@@ -1,80 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SFDS Inspector Panel</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFS Facility Inspections</title>
 
-  <link rel="stylesheet" href="style.css?v=9999" />
-  <link rel="icon" type="image/png" href="sfds-favicon.png" />
+<link rel="stylesheet" href="style.css">
+
 </head>
+<body class="inspector-body">
 
-<body data-page="inspector">
-<header class="c-header">
-  <div class="c-header-bar"></div>
-  <div class="c-header-inner">
-    <div class="c-header-title">
-      <h1>St. Francis de Sales — Inspector Panel</h1>
-      <p>Log inspections and issues in real time</p>
+<header class="top-header">
+  <div class="header-red"></div>
+
+  <div class="header-inner">
+    <div>
+      <h1>🏫 SFS Facility Inspection System</h1>
+      <p>St. Francis de Sales High School</p>
     </div>
 
-    <div class="c-header-right">
+    <div class="header-right">
       <div class="live-pill">
-        <div class="live-dot"></div>
+        <span class="live-dot"></span>
         LIVE
       </div>
-      <div class="clock" id="clockInspector">--:--</div>
+
+      <div id="clock"></div>
     </div>
   </div>
 </header>
 
-<main class="c-main">
+<main class="main-wrap">
 
-  <div class="card">
-    <div class="ctitle">Inspector & Location</div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="inspectorSelect">Inspector</label>
-        <select id="inspectorSelect">
-          <option value="">Select inspector...</option>
-        </select>
+  <!-- LOGIN SCREEN -->
+  <section id="login-screen" class="card login-card">
+
+    <h2>Select Inspector</h2>
+
+    <select id="inspector-select">
+      <option value="">Select Name</option>
+    </select>
+
+    <div id="other-name-wrap" style="display:none;">
+      <input
+        type="text"
+        id="other-name"
+        placeholder="Enter Your Name"
+      >
+    </div>
+
+    <button class="primary-btn" onclick="startInspection()">
+      Begin Inspection
+    </button>
+
+  </section>
+
+  <!-- INSPECTION SCREEN -->
+  <section id="inspection-screen" style="display:none;">
+
+    <div class="card inspector-info-card">
+      <div>
+        <div class="small-label">CURRENT INSPECTOR</div>
+        <div id="active-inspector" class="big-name"></div>
       </div>
-      <div class="form-field">
-        <label for="locationSelect">Location</label>
-        <select id="locationSelect">
-          <option value="">Select location...</option>
-        </select>
+
+      <div>
+        <div class="small-label">CURRENT INSPECTION WINDOW</div>
+        <div id="inspection-window"></div>
+      </div>
+
+      <div>
+        <div class="small-label">NEXT RESET</div>
+        <div id="countdown"></div>
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="ctitle">Inspection Status</div>
-    <div class="status-buttons">
-      <button class="status-btn ok" data-status="all_clear">All Clear</button>
-      <button class="status-btn warn" data-status="issues_found">Issues Found</button>
-      <button class="status-btn due" data-status="inspection_due">Inspection Due</button>
+    <div class="card">
+
+      <div class="section-title">
+        Hourly Inspection Checklist
+      </div>
+
+      <div id="inspection-board"></div>
+
     </div>
 
-    <div class="form-field">
-      <label for="issueNotes">Notes / Issues</label>
-      <textarea id="issueNotes" rows="4" placeholder="Describe any issues, or leave blank if all clear..."></textarea>
-    </div>
-
-    <button class="rbtn primary" id="submitInspectionBtn">Submit Inspection</button>
-  </div>
-
-  <div class="card">
-    <div class="ctitle">Next Inspection</div>
-    <div id="nextInspection">No upcoming inspection scheduled.</div>
-  </div>
-
-  <div class="foot">SFDS Inspector Panel</div>
+  </section>
 
 </main>
 
-<div id="toast"></div>
-
 <script src="script.js"></script>
+
+<script>
+
+initializeInspectorPage();
+
+</script>
+
 </body>
 </html>
