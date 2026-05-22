@@ -1,96 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Facility Inspection Dashboard</title>
-    <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFS Facility Inspections</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
+<body class="inspector-body">
 
-<body class="supervisor">
-    <header>
-        <h1>Facility Inspection Dashboard</h1>
-        <nav>
-            <button onclick="switchView('supervisor')">Supervisor View</button>
-            <button onclick="switchView('inspector')">Inspector View</button>
-        </nav>
-    </header>
+<header class="top-header">
+  <div class="header-red"></div>
 
-    <!-- SUPERVISOR DASHBOARD -->
-    <section id="supervisor-section" class="dashboard-section">
-        <h2>Supervisor Overview</h2>
+  <div class="header-inner">
+    <div>
+      <h1>🏫 SFS Facility Inspection System</h1>
+      <p>St. Francis de Sales High School</p>
+    </div>
 
-        <div class="stats-container">
-            <div class="stat-box">
-                <h3>Total Inspections</h3>
-                <p id="total-inspections">0</p>
-            </div>
-            <div class="stat-box">
-                <h3>Resolved</h3>
-                <p id="resolved-count">0</p>
-            </div>
-            <div class="stat-box">
-                <h3>Unresolved</h3>
-                <p id="unresolved-count">0</p>
-            </div>
-        </div>
+    <div class="header-right">
+      <div class="live-pill">
+        <span class="live-dot"></span>
+        LIVE
+      </div>
 
-        <table id="inspection-table">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Inspector</th>
-                    <th>Location</th>
-                    <th>Issues</th>
-                    <th>Notes</th>
-                    <th>Resolved</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="inspection-table-body"></tbody>
-        </table>
-    </section>
+      <div id="clock"></div>
+    </div>
+  </div>
+</header>
 
-    <!-- INSPECTOR DASHBOARD -->
-    <section id="inspector-section" class="dashboard-section hidden">
-        <h2>Submit Inspection</h2>
+<main class="main-wrap">
 
-        <label for="inspector-name">Inspector Name:</label>
-        <input type="text" id="inspector-name" placeholder="Your name" />
+  <!-- LOGIN SCREEN -->
+  <section id="login-screen" class="card login-card">
 
-        <label for="location-select">Location:</label>
-        <select id="location-select"></select>
+    <h2>Select Inspector</h2>
 
-        <label for="issues">Issues Found:</label>
-        <input type="text" id="issues" placeholder="Describe issues" />
+    <select id="inspector-select">
+      <option value="">Select Name</option>
+    </select>
 
-        <label for="notes">Notes:</label>
-        <textarea id="notes" placeholder="Additional notes"></textarea>
+    <div id="other-name-wrap" style="display:none;">
+      <input
+        type="text"
+        id="other-name"
+        placeholder="Enter Your Name"
+      >
+    </div>
 
-        <button onclick="submitInspection()">Submit Inspection</button>
-    </section>
+    <button class="primary-btn" onclick="startInspection()">
+      Begin Inspection
+    </button>
 
-    <script src="script.js"></script>
+  </section>
 
-    <script>
-        function switchView(view) {
-            const supervisor = document.getElementById("supervisor-section");
-            const inspector = document.getElementById("inspector-section");
+  <!-- INSPECTION SCREEN -->
+  <section id="inspection-screen" style="display:none;">
 
-            if (view === "supervisor") {
-                document.body.classList.add("supervisor");
-                document.body.classList.remove("inspector");
-                supervisor.classList.remove("hidden");
-                inspector.classList.add("hidden");
-                loadSupervisorData();
-            } else {
-                document.body.classList.add("inspector");
-                document.body.classList.remove("supervisor");
-                inspector.classList.remove("hidden");
-                supervisor.classList.add("hidden");
-                loadInspectorLocations();
-            }
-        }
-    </script>
+    <div class="card inspector-info-card">
+      <div>
+        <div class="small-label">CURRENT INSPECTOR</div>
+        <div id="active-inspector" class="big-name"></div>
+      </div>
+
+      <div>
+        <div class="small-label">CURRENT INSPECTION WINDOW</div>
+        <div id="inspection-window"></div>
+      </div>
+
+      <div>
+        <div class="small-label">NEXT RESET</div>
+        <div id="countdown"></div>
+      </div>
+    </div>
+
+    <div class="card">
+
+      <div class="section-title">
+        Hourly Inspection Checklist
+      </div>
+
+      <div id="inspection-board"></div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+
+<script>
+
+initializeInspectorPage();
+
+</script>
+
 </body>
 </html>
