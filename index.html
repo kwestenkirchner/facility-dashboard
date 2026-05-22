@@ -1,37 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>SFS Supervisor Dashboard</title>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<title>
+Supervisor Dashboard
+</title>
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet"
+      href="style.css">
 
 </head>
-<body class="supervisor-body">
 
-<header class="top-header">
+<body>
 
-  <div class="header-red"></div>
+<header>
+
+  <div class="topbar"></div>
 
   <div class="header-inner">
 
-    <div>
-      <h1>🏫 SFS Facility Inspection Dashboard</h1>
-      <p>St. Francis de Sales High School</p>
+    <div class="header-title">
+
+      <h1>
+        🏫 Facility Inspection Dashboard
+      </h1>
+
+      <p>
+        Supervisor View
+      </p>
+
     </div>
 
     <div class="header-right">
 
-      <div class="live-pill">
-        <span class="live-dot"></span>
-        LIVE
+      <div class="clock"
+           id="liveClock">
       </div>
 
-      <div id="clock"></div>
+      <button
+        class="refresh-btn"
+        onclick="loadSupervisorDashboard()">
+
+        Refresh
+
+      </button>
 
     </div>
 
@@ -39,80 +56,116 @@
 
 </header>
 
-<main class="main-wrap">
+<div id="toast"></div>
+
+<main>
 
   <!-- STATS -->
+
   <div class="stats-grid">
 
-    <div class="stat-card blue">
-      <div class="stat-label">TOTAL ISSUES</div>
-      <div class="stat-number" id="total-count">0</div>
+    <div class="stat-card">
+
+      <div class="stat-label">
+        Total Inspections
+      </div>
+
+      <div class="stat-value"
+           id="totalInspections">
+      </div>
+
     </div>
 
-    <div class="stat-card green">
-      <div class="stat-label">RESOLVED</div>
-      <div class="stat-number" id="resolved-count">0</div>
+
+    <div class="stat-card">
+
+      <div class="stat-label">
+        Resolved Issues
+      </div>
+
+      <div class="stat-value"
+           id="resolvedIssues">
+      </div>
+
     </div>
 
-    <div class="stat-card red">
-      <div class="stat-label">OPEN ISSUES</div>
-      <div class="stat-number" id="unresolved-count">0</div>
+
+    <div class="stat-card">
+
+      <div class="stat-label">
+        Open Issues
+      </div>
+
+      <div class="stat-value"
+           id="openIssues">
+      </div>
+
     </div>
 
   </div>
+
+
+  <!-- COUNTDOWN -->
+
+  <div class="countdown"
+       id="countdownBox">
+  </div>
+
 
   <!-- AREA STATUS -->
-  <div class="card">
 
-    <div class="section-title">
-      Area Inspection Status
-    </div>
-
-    <div id="area-status-grid" class="area-grid"></div>
-
+  <div class="section-title">
+    Area Status
   </div>
 
-  <!-- CHART -->
-  <div class="card">
-
-    <div class="section-title">
-      Average Time Issues Are Reported
-    </div>
-
-    <div class="chart-wrap">
-      <canvas id="issue-time-chart"></canvas>
-    </div>
-
+  <div class="area-grid"
+       id="locationCards">
   </div>
 
-  <!-- TABLE -->
-  <div class="card">
 
-    <div class="section-title">
-      Inspection Reports
-    </div>
+  <!-- AVERAGE ISSUE TIMES -->
 
-    <div class="table-wrap">
+  <div class="section-title">
+    Average Time Issues Reported
+  </div>
 
-      <table>
+  <div class="avg-grid"
+       id="issueAverageCards">
+  </div>
 
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Inspector</th>
-            <th>Location</th>
-            <th>Issues</th>
-            <th>Notes</th>
-            <th>Resolved</th>
-            <th>Action</th>
-          </tr>
-        </thead>
 
-        <tbody id="inspection-table"></tbody>
+  <!-- OPEN ISSUES TABLE -->
 
-      </table>
+  <div class="section-title">
+    Open Issues
+  </div>
 
-    </div>
+  <div class="table-wrap">
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Date</th>
+          <th>Time</th>
+          <th>Location</th>
+          <th>Inspector</th>
+          <th>Issues</th>
+          <th>Notes</th>
+          <th>Asana</th>
+          <th>Resolve</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="issueLogBody">
+
+      </tbody>
+
+    </table>
 
   </div>
 
