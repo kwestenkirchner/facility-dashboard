@@ -1,5 +1,5 @@
 const API_URL =
-"https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
+"https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec";
 
 const FORM_URL =
 "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform";
