@@ -3,89 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SFS Facility Inspections</title>
+
+<title>SFS Supervisor Dashboard</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 <link rel="stylesheet" href="style.css">
 
 </head>
-<body class="inspector-body">
+<body class="supervisor-body">
 
 <header class="top-header">
+
   <div class="header-red"></div>
 
   <div class="header-inner">
+
     <div>
-      <h1>🏫 SFS Facility Inspection System</h1>
+      <h1>🏫 SFS Facility Inspection Dashboard</h1>
       <p>St. Francis de Sales High School</p>
     </div>
 
     <div class="header-right">
+
       <div class="live-pill">
         <span class="live-dot"></span>
         LIVE
       </div>
 
       <div id="clock"></div>
+
     </div>
+
   </div>
+
 </header>
 
 <main class="main-wrap">
 
-  <!-- LOGIN SCREEN -->
-  <section id="login-screen" class="card login-card">
+  <!-- STATS -->
+  <div class="stats-grid">
 
-    <h2>Select Inspector</h2>
-
-    <select id="inspector-select">
-      <option value="">Select Name</option>
-    </select>
-
-    <div id="other-name-wrap" style="display:none;">
-      <input
-        type="text"
-        id="other-name"
-        placeholder="Enter Your Name"
-      >
+    <div class="stat-card blue">
+      <div class="stat-label">TOTAL ISSUES</div>
+      <div class="stat-number" id="total-count">0</div>
     </div>
 
-    <button class="primary-btn" onclick="startInspection()">
-      Begin Inspection
-    </button>
-
-  </section>
-
-  <!-- INSPECTION SCREEN -->
-  <section id="inspection-screen" style="display:none;">
-
-    <div class="card inspector-info-card">
-      <div>
-        <div class="small-label">CURRENT INSPECTOR</div>
-        <div id="active-inspector" class="big-name"></div>
-      </div>
-
-      <div>
-        <div class="small-label">CURRENT INSPECTION WINDOW</div>
-        <div id="inspection-window"></div>
-      </div>
-
-      <div>
-        <div class="small-label">NEXT RESET</div>
-        <div id="countdown"></div>
-      </div>
+    <div class="stat-card green">
+      <div class="stat-label">RESOLVED</div>
+      <div class="stat-number" id="resolved-count">0</div>
     </div>
 
-    <div class="card">
+    <div class="stat-card red">
+      <div class="stat-label">OPEN ISSUES</div>
+      <div class="stat-number" id="unresolved-count">0</div>
+    </div>
 
-      <div class="section-title">
-        Hourly Inspection Checklist
-      </div>
+  </div>
 
-      <div id="inspection-board"></div>
+  <!-- AREA STATUS -->
+  <div class="card">
+
+    <div class="section-title">
+      Area Inspection Status
+    </div>
+
+    <div id="area-status-grid" class="area-grid"></div>
+
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+
+    <div class="section-title">
+      Average Time Issues Are Reported
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="issue-time-chart"></canvas>
+    </div>
+
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+
+    <div class="section-title">
+      Inspection Reports
+    </div>
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Inspector</th>
+            <th>Location</th>
+            <th>Issues</th>
+            <th>Notes</th>
+            <th>Resolved</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody id="inspection-table"></tbody>
+
+      </table>
 
     </div>
 
-  </section>
+  </div>
 
 </main>
 
@@ -93,7 +122,7 @@
 
 <script>
 
-initializeInspectorPage();
+initializeSupervisorPage();
 
 </script>
 
