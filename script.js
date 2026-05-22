@@ -1,18 +1,31 @@
+/* =========================================================
+   script.js
+   ST. FRANCIS DE SALES FACILITY INSPECTION SYSTEM
+========================================================= */
+
 const API_URL =
 "https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec";
 
-const FORM_URL =
-"https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform";
+const INSPECTION_WINDOWS = [
+  9,10,11,12,13,14,15
+];
 
-const AREAS = [
+const AUTO_REFRESH_MS = 15000;
+
+const LOCATIONS = [
   "3rd Floor Restroom",
   "2nd Floor Restroom",
   "Cafeteria Mens Restroom",
-  "Auxiliary Locker Room 1 - North Wrestling Baseball Locker Room",
-  "Auxiliary Locker Room 2 - South Gym Locker Room"
+  "Cafeteria Womens Restroom",
+  "West Lobby Mens Restroom",
+  "West Lobby Womens Restroom",
+  "Auxiliary Locker Room 1 - North",
+  "Auxiliary Locker Room 2 - South",
+  "7th and 8th Grade Locker Room",
+  "Swim Locker Room"
 ];
 
-const INSPECTORS = [
+const DEFAULT_INSPECTORS = [
   "Ken Westenkirchner",
   "Matt Prater",
   "Corey Driver",
@@ -23,565 +36,754 @@ const INSPECTORS = [
   "Other"
 ];
 
-function updateClock() {
-  const now = new Date();
+let inspections = [];
+let refreshTimer = null;
 
-  const el = document.getElementById("clock");
 
-  if(el){
-    el.textContent = now.toLocaleTimeString();
-  }
+/* =========================================================
+   UTILITIES
+========================================================= */
+
+function formatTime(date) {
+  return new Date(date).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 }
 
-setInterval(updateClock,1000);
+function formatDate(date) {
+  return new Date(date).toLocaleDateString();
+}
 
-function initializeInspectorPage(){
+function isToday(date) {
+  const d = new Date(date);
+  const n = new Date();
 
-  populateInspectorDropdown();
+  return (
+    d.getDate() === n.getDate() &&
+    d.getMonth() === n.getMonth() &&
+    d.getFullYear() === n.getFullYear()
+  );
+}
 
-  const stored = localStorage.getItem("activeInspector");
+function currentWindowHour() {
 
-  if(stored){
-    loadInspectionScreen(stored);
+  const now = new Date();
+
+  return now.getHours();
+}
+
+function getCurrentWindowKey() {
+
+  const now = new Date();
+
+  return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+}
+
+function showToast(msg) {
+
+  const toast =
+    document.getElementById("toast");
+
+  if (!toast) return;
+
+  toast.innerText = msg;
+
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
+}
+
+
+/* =========================================================
+   CLOCK
+========================================================= */
+
+function startClock() {
+
+  const el =
+    document.getElementById("liveClock");
+
+  if (!el) return;
+
+  setInterval(() => {
+
+    el.innerText =
+      new Date().toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+  }, 1000);
+}
+
+
+/* =========================================================
+   SUPERVISOR
+========================================================= */
+
+async function initializeSupervisorPage() {
+
+  startClock();
+
+  await loadSupervisorDashboard();
+
+  refreshTimer = setInterval(
+    loadSupervisorDashboard,
+    AUTO_REFRESH_MS
+  );
+}
+
+
+async function loadSupervisorDashboard() {
+
+  const res =
+    await fetch(
+      `${API_URL}?action=getAllInspections`
+    );
+
+  inspections =
+    await res.json();
+
+  renderStats();
+  renderLocationCards();
+  renderIssueAverageCards();
+  renderIssueLog();
+  renderCountdown();
+}
+
+
+function renderStats() {
+
+  const total =
+    inspections.length;
+
+  const resolved =
+    inspections.filter(
+      x => x.resolved
+    ).length;
+
+  const unresolved =
+    inspections.filter(
+      x => !x.resolved &&
+           x.issues
+    ).length;
+
+  setText("totalInspections", total);
+  setText("resolvedIssues", resolved);
+  setText("openIssues", unresolved);
+}
+
+
+function renderLocationCards() {
+
+  const wrap =
+    document.getElementById(
+      "locationCards"
+    );
+
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  LOCATIONS.forEach(location => {
+
+    const relevant =
+      inspections.filter(
+        x => x.location === location
+      );
+
+    const unresolved =
+      relevant.find(
+        x => !x.resolved && x.issues
+      );
+
+    const latest =
+      relevant.sort(
+        (a,b)=>
+          new Date(b.timestamp) -
+          new Date(a.timestamp)
+      )[0];
+
+    let cls = "gray";
+
+    let status =
+      "No Inspection Recorded";
+
+    let meta = "";
+
+    if (unresolved) {
+
+      cls = "red";
+
+      status =
+        "Issue Reported";
+
+      meta =
+        unresolved.issues;
+    }
+
+    else if (latest) {
+
+      const ts =
+        new Date(latest.timestamp);
+
+      const mins =
+        (Date.now() - ts.getTime()) /
+        60000;
+
+      if (mins > 60) {
+
+        cls = "yellow";
+
+        status = "OVERDUE";
+
+        meta =
+          `Last Inspection:
+          ${formatTime(ts)}
+          · ${latest.inspector}`;
+      }
+
+      else {
+
+        cls = "green";
+
+        status = "All Clear";
+
+        meta =
+          `Last Inspection:
+          ${formatTime(ts)}
+          · ${latest.inspector}`;
+      }
+    }
+
+    wrap.innerHTML += `
+      <div class="area-card ${cls}">
+        <div class="area-name">
+          ${location}
+        </div>
+
+        <div class="area-status">
+          ${status}
+        </div>
+
+        <div class="area-meta">
+          ${meta}
+        </div>
+      </div>
+    `;
+  });
+}
+
+
+/* =========================================================
+   ISSUE AVERAGE CARDS
+========================================================= */
+
+function renderIssueAverageCards() {
+
+  const wrap =
+    document.getElementById(
+      "issueAverageCards"
+    );
+
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  LOCATIONS.forEach(location => {
+
+    const issues =
+      inspections.filter(x =>
+        x.location === location &&
+        x.issues
+      );
+
+    if (!issues.length) return;
+
+    const avg =
+      issues.reduce((sum,x)=>{
+
+        return (
+          sum +
+          new Date(x.timestamp).getHours()
+        );
+
+      },0) / issues.length;
+
+    let hour =
+      Math.round(avg);
+
+    let label =
+      hour > 12
+      ? `${hour-12}:00 PM`
+      : `${hour}:00 AM`;
+
+    wrap.innerHTML += `
+      <div class="avg-card">
+        <div class="avg-location">
+          ${location}
+        </div>
+
+        <div class="avg-count">
+          ${issues.length}
+          Issues
+        </div>
+
+        <div class="avg-time">
+          Avg Reported:
+          ${label}
+        </div>
+      </div>
+    `;
+  });
+}
+
+
+/* =========================================================
+   ISSUE LOG
+========================================================= */
+
+function renderIssueLog() {
+
+  const body =
+    document.getElementById(
+      "issueLogBody"
+    );
+
+  if (!body) return;
+
+  body.innerHTML = "";
+
+  const issues =
+    inspections.filter(x =>
+      x.issues &&
+      !x.resolved
+    );
+
+  if (!issues.length) {
+
+    body.innerHTML =
+      `<tr>
+        <td colspan="8">
+          No open issues
+        </td>
+      </tr>`;
+
+    return;
   }
+
+  issues.forEach(row => {
+
+    body.innerHTML += `
+      <tr>
+
+        <td>
+          ${formatDate(row.timestamp)}
+        </td>
+
+        <td>
+          ${formatTime(row.timestamp)}
+        </td>
+
+        <td>
+          ${row.location}
+        </td>
+
+        <td>
+          ${row.inspector}
+        </td>
+
+        <td>
+          ${row.issues}
+        </td>
+
+        <td>
+          ${row.notes || ""}
+        </td>
+
+        <td>
+
+          ${
+            row.asana
+            ? `
+              <span class="asana-complete">
+                ✔ Asana
+              </span>
+            `
+            : `
+              <button
+                class="asana-btn"
+                onclick="markAsana(${row.id})"
+              >
+                Added to Asana
+              </button>
+            `
+          }
+
+        </td>
+
+        <td>
+
+          <button
+            class="resolve-btn"
+            onclick="resolveIssue(${row.id})"
+          >
+            Resolve
+          </button>
+
+        </td>
+
+      </tr>
+    `;
+  });
+}
+
+
+/* =========================================================
+   RESOLVE
+========================================================= */
+
+async function resolveIssue(id) {
+
+  await fetch(API_URL, {
+
+    method: "POST",
+
+    body: JSON.stringify({
+
+      action: "resolveIssue",
+
+      id
+
+    })
+  });
+
+  showToast("Issue resolved");
+
+  await loadSupervisorDashboard();
+}
+
+
+/* =========================================================
+   ASANA
+========================================================= */
+
+async function markAsana(id) {
+
+  await fetch(API_URL, {
+
+    method: "POST",
+
+    body: JSON.stringify({
+
+      action: "markAsana",
+
+      id
+
+    })
+  });
+
+  showToast("Marked for Asana");
+
+  await loadSupervisorDashboard();
+}
+
+
+/* =========================================================
+   COUNTDOWN
+========================================================= */
+
+function renderCountdown() {
+
+  const el =
+    document.getElementById(
+      "countdownBox"
+    );
+
+  if (!el) return;
+
+  const now =
+    new Date();
+
+  const next =
+    INSPECTION_WINDOWS.find(
+      h => h > now.getHours()
+    );
+
+  if (!next) {
+
+    el.innerHTML =
+      "Inspection windows complete for today";
+
+    return;
+  }
+
+  const nextDate =
+    new Date();
+
+  nextDate.setHours(next);
+  nextDate.setMinutes(0);
+  nextDate.setSeconds(0);
+
+  const diff =
+    nextDate - now;
+
+  const mins =
+    Math.floor(diff / 60000);
+
+  el.innerHTML =
+    `Next Inspection Window:
+    ${formatTime(nextDate)}
+    (${mins} min)`;
+}
+
+
+/* =========================================================
+   INSPECTOR PAGE
+========================================================= */
+
+function initializeInspectorPage() {
+
+  startClock();
+
+  populateInspectors();
+
+  restoreInspector();
 
   renderInspectionBoard();
 
-  updateInspectionWindow();
-
-  setInterval(updateInspectionWindow,1000);
-
+  setInterval(() => {
+    renderInspectionBoard();
+  }, 30000);
 }
 
-function populateInspectorDropdown(){
 
-  const select =
-    document.getElementById("inspector-select");
+function populateInspectors() {
 
-  if(!select) return;
+  const sel =
+    document.getElementById(
+      "inspectorSelect"
+    );
 
-  INSPECTORS.forEach(name => {
+  if (!sel) return;
 
-    const option =
-      document.createElement("option");
+  const stored =
+    JSON.parse(
+      localStorage.getItem(
+        "extraInspectors"
+      ) || "[]"
+    );
 
-    option.value = name;
-    option.textContent = name;
+  const names =
+    [...DEFAULT_INSPECTORS, ...stored];
 
-    select.appendChild(option);
+  sel.innerHTML =
+    `<option value="">
+      Select Inspector
+    </option>`;
 
+  names.forEach(name => {
+
+    sel.innerHTML += `
+      <option value="${name}">
+        ${name}
+      </option>
+    `;
   });
-
-  select.addEventListener("change", () => {
-
-    const otherWrap =
-      document.getElementById("other-name-wrap");
-
-    if(select.value === "Other"){
-      otherWrap.style.display = "block";
-    }else{
-      otherWrap.style.display = "none";
-    }
-
-  });
-
 }
 
-function startInspection(){
 
-  let inspector =
-    document.getElementById("inspector-select").value;
+function handleInspectorSelect() {
 
-  if(inspector === "Other"){
-    inspector =
-      document.getElementById("other-name").value.trim();
-  }
+  const sel =
+    document.getElementById(
+      "inspectorSelect"
+    );
 
-  if(!inspector){
-    alert("Please select or enter a name.");
+  if (sel.value === "Other") {
+
+    const name =
+      prompt(
+        "Enter Inspector Name"
+      );
+
+    if (!name) return;
+
+    const existing =
+      JSON.parse(
+        localStorage.getItem(
+          "extraInspectors"
+        ) || "[]"
+      );
+
+    existing.push(name);
+
+    localStorage.setItem(
+      "extraInspectors",
+      JSON.stringify(existing)
+    );
+
+    localStorage.setItem(
+      "activeInspector",
+      name
+    );
+
+    location.reload();
+
     return;
   }
 
   localStorage.setItem(
     "activeInspector",
-    inspector
+    sel.value
   );
-
-  loadInspectionScreen(inspector);
-
 }
 
-function loadInspectionScreen(name){
 
-  document.getElementById("login-screen")
-    .style.display = "none";
+function restoreInspector() {
 
-  document.getElementById("inspection-screen")
-    .style.display = "block";
+  const name =
+    localStorage.getItem(
+      "activeInspector"
+    );
 
-  document.getElementById("active-inspector")
-    .textContent = name;
+  const sel =
+    document.getElementById(
+      "inspectorSelect"
+    );
 
+  if (!sel || !name) return;
+
+  sel.value = name;
 }
 
-function getHourKey(){
 
-  const now = new Date();
+function renderInspectionBoard() {
 
-  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+  const wrap =
+    document.getElementById(
+      "inspectionBoard"
+    );
 
-}
+  if (!wrap) return;
 
-function getInspectionData(){
+  wrap.innerHTML = "";
 
-  return JSON.parse(
-    localStorage.getItem("inspectionData") || "{}"
-  );
+  const inspector =
+    localStorage.getItem(
+      "activeInspector"
+    );
 
-}
+  LOCATIONS.forEach(location => {
 
-function saveInspectionData(data){
+    const key =
+      `${getCurrentWindowKey()}-${location}`;
 
-  localStorage.setItem(
-    "inspectionData",
-    JSON.stringify(data)
-  );
+    const state =
+      localStorage.getItem(key);
 
-}
+    let actions = "";
 
-function renderInspectionBoard(){
+    if (state === "clear") {
 
-  const board =
-    document.getElementById("inspection-board");
-
-  if(!board) return;
-
-  const data = getInspectionData();
-
-  const hourKey = getHourKey();
-
-  if(!data[hourKey]){
-    data[hourKey] = {};
-  }
-
-  board.innerHTML = AREAS.map(area => {
-
-    const status =
-      data[hourKey][area];
-
-    let buttons = `
-      <button
-        class="clear-btn"
-        onclick="markAreaClear('${area}')">
-        All Clear
-      </button>
-
-      <button
-        class="issue-btn"
-        onclick="reportIssue('${area}')">
-        Issues Found
-      </button>
-    `;
-
-    if(status === "clear"){
-      buttons = `
-        <div class="complete-green">
+      actions =
+        `<div class="check-green">
           ✔ All Clear
-        </div>
+        </div>`;
+    }
+
+    else if (state === "issue") {
+
+      actions =
+        `<div class="check-red">
+          ✔ Issue Reported
+        </div>`;
+    }
+
+    else {
+
+      actions = `
+        <button
+          class="clear-btn"
+          onclick="markClear('${location}')"
+        >
+          All Clear
+        </button>
+
+        <button
+          class="issue-btn"
+          onclick="reportIssue('${location}')"
+        >
+          Issues Found
+        </button>
       `;
     }
 
-    if(status === "issue"){
-      buttons = `
-        <div class="complete-red">
-          ✔ Issues Reported
-        </div>
-      `;
-    }
-
-    return `
+    wrap.innerHTML += `
       <div class="inspection-row">
 
-        <div class="inspection-area">
-          ${area}
+        <div class="inspection-location">
+          ${location}
         </div>
 
         <div class="inspection-actions">
-          ${buttons}
+          ${actions}
         </div>
 
       </div>
     `;
-
-  }).join("");
-
-}
-
-function markAreaClear(area){
-
-  const data = getInspectionData();
-
-  const hourKey = getHourKey();
-
-  if(!data[hourKey]){
-    data[hourKey] = {};
-  }
-
-  data[hourKey][area] = "clear";
-
-  saveInspectionData(data);
-
-  renderInspectionBoard();
-
-}
-
-function reportIssue(area){
-
-  const inspector =
-    localStorage.getItem("activeInspector") || "";
-
-  const data = getInspectionData();
-
-  const hourKey = getHourKey();
-
-  if(!data[hourKey]){
-    data[hourKey] = {};
-  }
-
-  data[hourKey][area] = "issue";
-
-  saveInspectionData(data);
-
-  renderInspectionBoard();
-
-  const url =
-    `${FORM_URL}?usp=pp_url` +
-    `&entry.1456245431=${encodeURIComponent(inspector)}` +
-    `&entry.1739126018=${encodeURIComponent(area)}`;
-
-  window.open(url,"_blank");
-
-}
-
-function updateInspectionWindow(){
-
-  const now = new Date();
-
-  const nextHour = new Date();
-
-  nextHour.setHours(now.getHours()+1);
-  nextHour.setMinutes(0);
-  nextHour.setSeconds(0);
-
-  const diff =
-    nextHour - now;
-
-  const mins =
-    Math.floor(diff / 60000);
-
-  const secs =
-    Math.floor((diff % 60000)/1000);
-
-  const countdown =
-    document.getElementById("countdown");
-
-  if(countdown){
-    countdown.textContent =
-      `${mins}m ${secs}s`;
-  }
-
-  const windowEl =
-    document.getElementById("inspection-window");
-
-  if(windowEl){
-
-    const start =
-      `${now.getHours()}:00`;
-
-    const end =
-      `${now.getHours()+1}:00`;
-
-    windowEl.textContent =
-      `${start} - ${end}`;
-
-  }
-
-}
-
-async function initializeSupervisorPage(){
-
-  updateClock();
-
-  await loadSupervisorDashboard();
-
-  setInterval(loadSupervisorDashboard,60000);
-
-}
-
-async function loadSupervisorDashboard(){
-
-  const response =
-    await fetch(
-      `${API_URL}?action=getAllInspections`
-    );
-
-  const data =
-    await response.json();
-
-  renderStats(data);
-
-  renderTable(data);
-
-  renderAreaCards(data);
-
-  renderIssueChart(data);
-
-}
-
-function renderStats(data){
-
-  const total =
-    data.length;
-
-  const resolved =
-    data.filter(x => x.resolved).length;
-
-  const unresolved =
-    total - resolved;
-
-  document.getElementById("total-count")
-    .textContent = total;
-
-  document.getElementById("resolved-count")
-    .textContent = resolved;
-
-  document.getElementById("unresolved-count")
-    .textContent = unresolved;
-
-}
-
-function renderTable(data){
-
-  const tbody =
-    document.getElementById("inspection-table");
-
-  if(!tbody) return;
-
-  tbody.innerHTML =
-    data.reverse().map(item => {
-
-      return `
-        <tr>
-
-          <td>${new Date(item.timestamp).toLocaleString()}</td>
-
-          <td>${item.inspector}</td>
-
-          <td>${item.location}</td>
-
-          <td>${item.issues}</td>
-
-          <td>${item.notes}</td>
-
-          <td>
-            ${item.resolved ? "Yes" : "No"}
-          </td>
-
-          <td>
-
-            ${
-              !item.resolved
-              ? `
-                <button
-                  class="resolve-btn"
-                  onclick="resolveIssue(${item.id})">
-                  Resolve
-                </button>
-              `
-              : "—"
-            }
-
-          </td>
-
-        </tr>
-      `;
-
-    }).join("");
-
-}
-
-function renderAreaCards(data){
-
-  const grid =
-    document.getElementById("area-status-grid");
-
-  if(!grid) return;
-
-  const latest = {};
-
-  AREAS.forEach(area => {
-
-    const areaReports =
-      data.filter(x => x.location === area);
-
-    if(areaReports.length){
-
-      latest[area] =
-        areaReports.sort((a,b)=>
-          new Date(b.timestamp) -
-          new Date(a.timestamp)
-        )[0];
-
-    }
-
   });
-
-  grid.innerHTML =
-    AREAS.map(area => {
-
-      const item = latest[area];
-
-      if(!item){
-
-        return `
-          <div class="area-card overdue">
-
-            <div class="area-title">
-              ${area}
-            </div>
-
-            <div class="area-meta">
-              No inspections recorded.
-            </div>
-
-          </div>
-        `;
-
-      }
-
-      const ts =
-        new Date(item.timestamp);
-
-      const diffHours =
-        (Date.now() - ts.getTime()) /
-        3600000;
-
-      let cls = "";
-
-      if(!item.resolved){
-        cls = "issue";
-      }else if(diffHours >= 1){
-        cls = "overdue";
-      }
-
-      return `
-        <div class="area-card ${cls}">
-
-          <div class="area-title">
-            ${area}
-          </div>
-
-          <div class="area-meta">
-
-            Last Inspection:
-            ${ts.toLocaleString()}
-
-            <br><br>
-
-            Inspector:
-            ${item.inspector}
-
-          </div>
-
-        </div>
-      `;
-
-    }).join("");
-
 }
 
-let issueChart;
 
-function renderIssueChart(data){
+function markClear(location) {
 
-  const counts = {};
+  const key =
+    `${getCurrentWindowKey()}-${location}`;
 
-  AREAS.forEach(area => {
-    counts[area] = [];
-  });
-
-  data.forEach(item => {
-
-    const hr =
-      new Date(item.timestamp).getHours();
-
-    if(item.location){
-      counts[item.location].push(hr);
-    }
-
-  });
-
-  const labels = [];
-  const averages = [];
-
-  Object.keys(counts).forEach(area => {
-
-    const vals = counts[area];
-
-    if(vals.length){
-
-      const avg =
-        vals.reduce((a,b)=>a+b,0) /
-        vals.length;
-
-      labels.push(area);
-
-      averages.push(avg);
-
-    }
-
-  });
-
-  const ctx =
-    document.getElementById("issue-time-chart");
-
-  if(!ctx) return;
-
-  if(issueChart){
-    issueChart.destroy();
-  }
-
-  issueChart =
-    new Chart(ctx,{
-      type:"bar",
-      data:{
-        labels,
-        datasets:[{
-          label:"Average Hour",
-          data:averages
-        }]
-      },
-      options:{
-        responsive:true,
-        maintainAspectRatio:false
-      }
-    });
-
-}
-
-async function resolveIssue(id){
-
-  await fetch(
-    `${API_URL}?action=resolveIssue`,
-    {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({id})
-    }
+  localStorage.setItem(
+    key,
+    "clear"
   );
 
-  loadSupervisorDashboard();
+  renderInspectionBoard();
+}
 
+
+function reportIssue(location) {
+
+  const inspector =
+    localStorage.getItem(
+      "activeInspector"
+    );
+
+  const key =
+    `${getCurrentWindowKey()}-${location}`;
+
+  localStorage.setItem(
+    key,
+    "issue"
+  );
+
+  const url =
+    `${API_URL}?action=openIssueForm` +
+    `&inspector=${encodeURIComponent(inspector)}` +
+    `&location=${encodeURIComponent(location)}`;
+
+  window.location.href = url;
+}
+
+
+function setText(id,val) {
+
+  const el =
+    document.getElementById(id);
+
+  if (el) {
+    el.innerText = val;
+  }
 }
