@@ -8,28 +8,45 @@
     content="width=device-width, initial-scale=1.0"
   />
 
-  <title>Facility Inspections — Inspector</title>
-
-  <!-- 🚨 FAVICON -->
-  <link
-    rel="icon"
-    href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚨</text></svg>'
-  >
+  <title>
+    Facility Inspection Dashboard — Inspector
+  </title>
 
   <link rel="stylesheet" href="style.css" />
+
+  <!-- 🚨 Alert Shield Favicon -->
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href='data:image/svg+xml,
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path fill="%23b91c1c"
+      d="M32 4 L56 14 V30 C56 46 45 57 32 60 C19 57 8 46 8 30 V14 Z"/>
+      <path fill="white"
+      d="M32 18 L34 38 H30 Z"/>
+      <circle cx="32" cy="46" r="3" fill="white"/>
+    </svg>'
+  />
 </head>
 
 <body>
 
 <header>
 
-  <div class="header-bar"></div>
+  <div class="header-top"></div>
 
   <div class="header-inner">
 
     <div class="header-title">
-      <h1>🏫 Facility Inspection System</h1>
-      <p>Inspector Portal</p>
+
+      <h1>
+        🚨 Facility Inspection Dashboard
+      </h1>
+
+      <p>
+        Inspector View · St. Francis de Sales
+      </p>
+
     </div>
 
     <div class="header-right">
@@ -39,7 +56,9 @@
         LIVE
       </div>
 
-      <div class="clock" id="clock">--:--</div>
+      <div class="clock" id="clock">
+        --:--:--
+      </div>
 
     </div>
 
@@ -47,53 +66,117 @@
 
 </header>
 
-<main>
+<main class="inspector-wrapper">
+
+  <!-- COUNTDOWN -->
+  <div class="countdown-card">
+    <div id="inspection-countdown"></div>
+  </div>
 
   <!-- LOGIN -->
-  <div class="login-wrapper" id="login-wrapper">
+  <div
+    class="inspector-login"
+    id="login-section"
+  >
 
-    <div class="login-card">
+    <h2>
+      Select Inspector
+    </h2>
 
-      <h2>Select Inspector</h2>
+    <div class="form-group">
 
-      <select id="inspector-select">
-        <option value="">Choose Inspector...</option>
+      <label for="inspector-name">
+        Inspector Name
+      </label>
+
+      <select id="inspector-name">
+
+        <option value="">
+          Select Inspector
+        </option>
+
+        <option>
+          Ken Westenkirchner
+        </option>
+
+        <option>
+          Matt Prater
+        </option>
+
+        <option>
+          Corey Driver
+        </option>
+
+        <option>
+          Murell Gregory
+        </option>
+
+        <option>
+          Khyle Weirich
+        </option>
+
+        <option>
+          Paris Martin
+        </option>
+
+        <option>
+          Michael Hagmeyer
+        </option>
+
+        <option value="OTHER">
+          Other / Not Listed
+        </option>
+
       </select>
 
     </div>
 
-  </div>
+    <div
+      class="form-group"
+      id="custom-name-group"
+      style="display:none;"
+    >
 
-  <!-- INSPECTION AREA -->
-  <div
-    class="inspection-wrapper"
-    id="inspection-wrapper"
-  >
+      <label for="custom-name">
+        Enter Your Name
+      </label>
 
-    <div class="countdown-box">
-
-      Active Inspector:
-      <span
-        class="active-inspector"
-        id="active-inspector"
-      ></span>
-
-      <br><br>
-
-      Next Inspection Window:
-      <span id="next-window"></span>
+      <input
+        type="text"
+        id="custom-name"
+        placeholder="Full Name"
+      />
 
     </div>
+
+    <button
+      class="refresh-btn"
+      onclick="beginInspection()"
+    >
+      Begin Inspection
+    </button>
+
+  </div>
+
+  <!-- INSPECTION AREA LIST -->
+  <div
+    id="inspection-section"
+    style="display:none;"
+  >
 
     <div class="section-title">
       📍 Inspection Areas
     </div>
 
     <div
-      class="inspection-grid"
-      id="inspection-grid"
+      class="area-list"
+      id="area-list"
     ></div>
 
+  </div>
+
+  <div class="footer">
+    Facility Dashboard · Inspector Workflow
   </div>
 
 </main>
@@ -101,7 +184,257 @@
 <script src="script.js"></script>
 
 <script>
+
+/* =========================================================
+   GOOGLE FORM PREFILL BASE URL
+========================================================= */
+
+const GOOGLE_FORM_PREFILL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSdv0823sBL02gmS9hErEdXtpKLNaWyahyLUxqt5apCOQCEcdQ/viewform?usp=pp_url";
+
+/* =========================================================
+   FORM FIELD IDS
+========================================================= */
+
+const NAME_ENTRY =
+  "entry.1456245431";
+
+const LOCATION_ENTRY =
+  "entry.1739126018";
+
+/* =========================================================
+   AREA STATE STORAGE
+========================================================= */
+
+const areaState = {};
+
+/* =========================================================
+   INITIALIZE PAGE
+========================================================= */
+
 initializeInspectorPage();
+
+document
+  .getElementById("inspector-name")
+  .addEventListener("change", (e) => {
+
+    const custom =
+      document.getElementById(
+        "custom-name-group"
+      );
+
+    if (e.target.value === "OTHER") {
+      custom.style.display = "block";
+    } else {
+      custom.style.display = "none";
+    }
+  });
+
+/* =========================================================
+   BEGIN INSPECTION
+========================================================= */
+
+function beginInspection() {
+
+  const dropdown =
+    document.getElementById(
+      "inspector-name"
+    );
+
+  let inspector =
+    dropdown.value;
+
+  if (inspector === "OTHER") {
+
+    inspector =
+      document
+        .getElementById("custom-name")
+        .value
+        .trim();
+  }
+
+  if (!inspector) {
+    alert("Please select your name.");
+    return;
+  }
+
+  localStorage.setItem(
+    "inspectorName",
+    inspector
+  );
+
+  document.getElementById(
+    "login-section"
+  ).style.display = "none";
+
+  document.getElementById(
+    "inspection-section"
+  ).style.display = "block";
+
+  renderInspectionAreas(inspector);
+}
+
+/* =========================================================
+   RENDER AREAS
+========================================================= */
+
+function renderInspectionAreas(inspector) {
+
+  const container =
+    document.getElementById(
+      "area-list"
+    );
+
+  container.innerHTML = "";
+
+  LOCATIONS.forEach((location) => {
+
+    const row =
+      document.createElement("div");
+
+    row.className = "area-row";
+
+    row.id =
+      "row-" +
+      encodeURIComponent(location);
+
+    row.innerHTML = `
+      <div class="area-name">
+        ${location}
+      </div>
+
+      <div class="area-actions">
+
+        <button
+          class="clear-btn"
+          onclick="
+            markAllClear(
+              '${encodeURIComponent(location)}'
+            )
+          "
+        >
+          All Clear
+        </button>
+
+        <button
+          class="issue-btn"
+          onclick="
+            reportIssue(
+              '${encodeURIComponent(location)}',
+              '${encodeURIComponent(inspector)}'
+            )
+          "
+        >
+          Issues Found
+        </button>
+
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+}
+
+/* =========================================================
+   MARK ALL CLEAR
+========================================================= */
+
+async function markAllClear(encodedLocation) {
+
+  const location =
+    decodeURIComponent(
+      encodedLocation
+    );
+
+  const inspector =
+    localStorage.getItem(
+      "inspectorName"
+    );
+
+  await fetch(API_URL, {
+    method: "POST",
+
+    body: JSON.stringify({
+      action: "submitInspection",
+
+      inspector,
+
+      location,
+
+      issues: "No Issues Found",
+
+      notes: "",
+
+      photos: false
+    })
+  });
+
+  const row =
+    document.getElementById(
+      "row-" + encodedLocation
+    );
+
+  row.innerHTML = `
+    <div class="area-name">
+      ${location}
+    </div>
+
+    <div class="
+      done-pill
+      done-green
+    ">
+      ✓
+    </div>
+  `;
+}
+
+/* =========================================================
+   REPORT ISSUE
+========================================================= */
+
+function reportIssue(
+  encodedLocation,
+  encodedInspector
+) {
+
+  const location =
+    decodeURIComponent(
+      encodedLocation
+    );
+
+  const inspector =
+    decodeURIComponent(
+      encodedInspector
+    );
+
+  const url =
+    GOOGLE_FORM_PREFILL +
+    `&${NAME_ENTRY}=` +
+    encodeURIComponent(inspector) +
+    `&${LOCATION_ENTRY}=` +
+    encodeURIComponent(location);
+
+  const row =
+    document.getElementById(
+      "row-" + encodedLocation
+    );
+
+  row.innerHTML = `
+    <div class="area-name">
+      ${location}
+    </div>
+
+    <div class="
+      done-pill
+      done-red
+    ">
+      !
+    </div>
+  `;
+
+  window.location.href = url;
+}
+
 </script>
 
 </body>
