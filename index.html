@@ -2,34 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
 
-  <title>Facility Inspection Dashboard</title>
-
-  <!-- 🚨 FAVICON -->
-  <link
-    rel="icon"
-    href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚨</text></svg>'
-  >
+  <title>
+    Facility Inspection Dashboard — Supervisor
+  </title>
 
   <link rel="stylesheet" href="style.css" />
+
+  <!-- 🚨 Alert Shield Favicon -->
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href='data:image/svg+xml,
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path fill="%23b91c1c"
+      d="M32 4 L56 14 V30 C56 46 45 57 32 60 C19 57 8 46 8 30 V14 Z"/>
+      <path fill="white"
+      d="M32 18 L34 38 H30 Z"/>
+      <circle cx="32" cy="46" r="3" fill="white"/>
+    </svg>'
+  />
 </head>
 
 <body>
 
 <header>
-
-  <div class="header-bar"></div>
+  <div class="header-top"></div>
 
   <div class="header-inner">
 
     <div class="header-title">
-      <h1>🏫 Facility Inspection Dashboard</h1>
-      <p>Supervisor Portal</p>
+      <h1>
+        🚨 Facility Inspection Dashboard
+      </h1>
+
+      <p>
+        Supervisor View · St. Francis de Sales
+      </p>
     </div>
 
     <div class="header-right">
@@ -39,34 +52,39 @@
         LIVE
       </div>
 
-      <div class="clock" id="clock">--:--</div>
+      <div class="clock" id="clock">
+        --:--:--
+      </div>
 
       <button
         class="refresh-btn"
-        onclick="loadSupervisorDashboard()"
+        onclick="refreshDashboard()"
       >
         ↻ Refresh
       </button>
 
     </div>
-
   </div>
-
 </header>
 
 <main>
+
+  <!-- COUNTDOWN -->
+  <div class="countdown-card">
+    <div id="inspection-countdown"></div>
+  </div>
 
   <!-- STATS -->
   <div class="stats-grid">
 
     <div class="stat-card">
       <div class="stat-label">
-        Total Inspections Today
+        Total Inspections
       </div>
 
       <div
         class="stat-value"
-        id="stat-total"
+        id="total-inspections"
       >
         0
       </div>
@@ -74,12 +92,12 @@
 
     <div class="stat-card green">
       <div class="stat-label">
-        All Clear
+        Resolved
       </div>
 
       <div
         class="stat-value"
-        id="stat-clear"
+        id="resolved-count"
       >
         0
       </div>
@@ -92,7 +110,7 @@
 
       <div
         class="stat-value"
-        id="stat-open"
+        id="open-count"
       >
         0
       </div>
@@ -100,71 +118,73 @@
 
   </div>
 
-  <!-- NEXT WINDOW -->
-  <div class="countdown-box">
-
-    Next Inspection Window:
-    <span id="next-window"></span>
-
-  </div>
-
-  <!-- AREA STATUS -->
+  <!-- LOCATION STATUS -->
   <div class="section-title">
     📍 Area Status
   </div>
 
   <div
-    class="area-grid"
-    id="area-grid"
+    class="location-grid"
+    id="location-grid"
   ></div>
 
-  <!-- AVERAGE ISSUE TIME -->
-  <div class="section-title">
-    ⏰ Average Issue Time by Area
+  <!-- AVERAGE ISSUE TIMES -->
+  <div class="card">
+
+    <div class="section-title">
+      ⏰ Average Issue Report Time by Area
+    </div>
+
+    <div
+      class="avg-grid"
+      id="average-issue-cards"
+    ></div>
+
   </div>
-
-  <div
-    class="average-grid"
-    id="average-grid"
-  ></div>
 
   <!-- OPEN ISSUES -->
-  <div class="section-title">
-    🚨 Open Issues
-  </div>
+  <div class="card">
 
-  <div class="table-card">
+    <div class="section-title">
+      🚨 Open Issues Log
+    </div>
 
-    <table>
+    <div class="table-wrap">
 
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Inspector</th>
-          <th>Location</th>
-          <th>Issues</th>
-          <th>Notes</th>
-          <th>Asana</th>
-          <th>Resolve</th>
-        </tr>
-      </thead>
+      <table>
 
-      <tbody id="issues-body">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Inspector</th>
+            <th>Location</th>
+            <th>Issue</th>
+            <th>Notes</th>
+            <th>Asana</th>
+            <th>Resolve</th>
+          </tr>
+        </thead>
 
-        <tr>
-          <td colspan="7" class="empty">
-            Loading Open Issues...
-          </td>
-        </tr>
+        <tbody id="open-issues-body">
 
-      </tbody>
+          <tr>
+            <td
+              colspan="7"
+              class="empty-state"
+            >
+              Loading...
+            </td>
+          </tr>
 
-    </table>
+        </tbody>
 
+      </table>
+
+    </div>
   </div>
 
   <div class="footer">
-    Facility Dashboard — Auto Refresh Every 15 Seconds
+    Facility Dashboard · Auto Refresh Every 15 Seconds
   </div>
 
 </main>
@@ -172,7 +192,7 @@
 <script src="script.js"></script>
 
 <script>
-initializeSupervisorPage();
+  initializeSupervisorPage();
 </script>
 
 </body>
