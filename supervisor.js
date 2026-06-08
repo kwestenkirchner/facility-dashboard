@@ -1,6 +1,6 @@
 function showSection(sectionId)
 {
-const sections = document.querySelectorAll('.section');
+const sections = document.querySelectorAll('.fm-section');
 
 ```
 sections.forEach(section =>
