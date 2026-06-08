@@ -1,79 +1,242 @@
 <!DOCTYPE html>
+
 <html>
 
 <head>
 
-    <title>Facility Operations Supervisor Dashboard</title>
+```
+<title>Facility & Maintenance Dashboard</title>
 
-    <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css">
+```
 
 </head>
 
 <body>
 
-<div class="header">
+<div class="fm-header">
 
-    <h1>Facility Operations Supervisor Dashboard</h1>
+```
+<div>
+    <h1>Facility & Maintenance Dashboard</h1>
+    <p>Supervisor Command Center</p>
+</div>
+
+<div class="header-right">
+
+    <div id="currentDate">Date</div>
+
+    <div id="currentTime">Time</div>
+
+</div>
+```
 
 </div>
 
-<div class="nav-bar">
+<div class="fm-nav">
 
-    <button onclick="showSection('dashboard')">Dashboard</button>
+```
+<button onclick="showSection('dashboard')">Dashboard</button>
 
-    <button onclick="showSection('assignments')">Assignments</button>
+<button onclick="showSection('assignments')">Assignments</button>
 
-    <button onclick="showSection('attendance')">Attendance</button>
+<button onclick="showSection('attendance')">Attendance</button>
 
-    <button onclick="showSection('coverage')">Coverage</button>
+<button onclick="showSection('coverage')">Coverage</button>
 
-    <button onclick="showSection('events')">Events</button>
+<button onclick="showSection('events')">Events</button>
 
-    <button onclick="showSection('issues')">Issues</button>
+<button onclick="showSection('issues')">Issues</button>
 
-    <button onclick="showSection('pickup')">Open Pickup Tasks</button>
+<button onclick="showSection('pickup')">Pickup Tasks</button>
+
+<button onclick="window.location.href='inspector.html'">Inspections</button>
+```
 
 </div>
 
 <div id="dashboard" class="section">
 
-    <h2>Dashboard</h2>
+<h2>Command Center</h2>
+
+<div class="dashboard-grid">
+
+<div class="dashboard-card">
+<h3>Building Readiness</h3>
+<h1>94%</h1>
+<p>Status: READY</p>
+</div>
+
+<div class="dashboard-card">
+<h3>Attendance</h3>
+<p>Present: 9</p>
+<p>Absent: 1</p>
+<p>PTO: 2</p>
+</div>
+
+<div class="dashboard-card">
+<h3>Events Today</h3>
+<p>3 Scheduled</p>
+<p>1 Requires Setup</p>
+</div>
+
+<div class="dashboard-card">
+<h3>Open Issues</h3>
+<p>12 Open</p>
+<p>2 Critical</p>
+</div>
+
+</div>
+
+<div class="dashboard-grid">
+
+<div class="dashboard-card wide">
+
+<h3>Supervisor Action Center</h3>
+
+<ul>
+
+<li>PTO Approval Needed</li>
+
+<li>Doctor Note Missing</li>
+
+<li>Coverage Approval Required</li>
+
+<li>Attendance Audit Due</li>
+
+<li>Event Follow-Up Email Due</li>
+
+</ul>
+
+</div>
+
+<div class="dashboard-card">
+
+<h3>Operational Rounds</h3>
+
+<p>AM Open: Complete</p>
+
+<p>Pool Check: Complete</p>
+
+<p>End of School Day: Pending</p>
+
+<p>Final Lock-Up: Pending</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h3>Assignment Progress</h3>
+
+<p>Completed: 87</p>
+
+<p>Remaining: 14</p>
+
+<p>Late: 2</p>
+
+</div>
+
+</div>
+
+<div class="dashboard-grid">
+
+<div class="dashboard-card">
+
+<h3>Inspection Summary</h3>
+
+<p>Due Today: 4</p>
+
+<p>Completed: 2</p>
+
+<p>Remaining: 2</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h3>Employee Status</h3>
+
+<p>Present Employees</p>
+
+<p>Coverage Needed: 0</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h3>Weather Operations</h3>
+
+<p>No Weather Operations Today</p>
+
+</div>
+
+</div>
+
+<div class="dashboard-card">
+
+<h3>Quick Actions</h3>
+
+<button>Add Attendance</button>
+
+<button>Create Event</button>
+
+<button>Create Issue</button>
+
+<button>Open Assignments</button>
+
+<button>Open Coverage</button>
+
+<button>Generate Readiness Report</button>
+
+</div>
 
 </div>
 
 <div id="assignments" class="section">
 
-    <h2>Assignments</h2>
+<h2>Assignments</h2>
+
+<p>Assignments Module Coming Next</p>
 
 </div>
 
 <div id="attendance" class="section">
 
-    <h2>Attendance</h2>
+<h2>Attendance</h2>
+
+<p>Attendance Module Coming Next</p>
 
 </div>
 
 <div id="coverage" class="section">
 
-    <h2>Coverage</h2>
+<h2>Coverage</h2>
+
+<p>Coverage Module Coming Next</p>
 
 </div>
 
 <div id="events" class="section">
 
-    <h2>Events</h2>
+<h2>Events</h2>
+
+<p>Events Module Coming Next</p>
 
 </div>
 
 <div id="issues" class="section">
 
-    <h2>Issues</h2>
+<h2>Issues</h2>
+
+<p>Issue Module Coming Next</p>
 
 </div>
 
 <div id="pickup" class="section">
 
-    <h2>Open Pickup Tasks</h2>
+<h2>Open Pickup Tasks</h2>
+
+<p>Pickup Task Module Coming Next</p>
 
 </div>
 
