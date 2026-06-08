@@ -665,3 +665,27 @@ input {
     grid-template-columns: 1fr;
   }
 }
+.header
+{
+    padding:20px;
+    background:#1f2937;
+    color:white;
+}
+
+.nav-bar
+{
+    padding:10px;
+    background:#e5e7eb;
+}
+
+.nav-bar button
+{
+    margin-right:10px;
+    padding:10px 15px;
+}
+
+.section
+{
+    display:none;
+    padding:20px;
+}
