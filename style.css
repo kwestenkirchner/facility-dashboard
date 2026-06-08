@@ -684,103 +684,12 @@ input {
     padding:10px 15px;
 }
 
-.section
+.fm-section
 {
     display:none;
     padding:20px;
 }
-.fm-header
-{
-display:flex;
-justify-content:space-between;
-align-items:center;
 
-```
-padding:20px;
-
-background:#1f2937;
-
-color:white;
-```
-
-}
-
-.header-right
-{
-text-align:right;
-}
-
-.fm-nav
-{
-padding:10px;
-
-```
-background:#e5e7eb;
-```
-
-}
-
-.fm-nav button
-{
-margin-right:10px;
-
-```
-padding:10px 15px;
-
-cursor:pointer;
-```
-
-}
-
-.section
-{
-display:none;
-
-```
-padding:20px;
-```
-
-}
-
-.dashboard-grid
-{
-display:grid;
-
-```
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-
-gap:15px;
-
-margin-bottom:15px;
-```
-
-}
-
-.dashboard-card
-{
-background:white;
-
-```
-border:1px solid #d1d5db;
-
-border-radius:10px;
-
-padding:15px;
-
-box-shadow:0 2px 4px rgba(0,0,0,0.1);
-```
-
-}
-
-.dashboard-card.wide
-{
-grid-column:span 2;
-}
-
-.dashboard-card h3
-{
-margin-top:0;
-}
 /* =========================================================
    SUPERVISOR COMMAND CENTER
 ========================================================= */
