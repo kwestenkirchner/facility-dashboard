@@ -1,4 +1,3 @@
-javascript
 function showSection(sectionId)
 {
     const sections = document.querySelectorAll('.fm-section');
