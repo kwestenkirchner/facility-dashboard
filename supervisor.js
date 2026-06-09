@@ -1,34 +1,44 @@
+javascript
 function showSection(sectionId)
 {
-const sections = document.querySelectorAll('.fm-section');
+    const sections = document.querySelectorAll('.fm-section');
 
-```
-sections.forEach(section =>
-{
-    section.style.display = 'none';
-});
+    sections.forEach(section =>
+    {
+        section.style.display = 'none';
+    });
 
-document.getElementById(sectionId).style.display = 'block';
-```
+    const target = document.getElementById(sectionId);
 
+    if (target)
+    {
+        target.style.display = 'block';
+    }
 }
-
-showSection('dashboard');
 
 function updateClock()
 {
-const now = new Date();
+    const now = new Date();
 
-```
-document.getElementById('currentDate').innerText =
-    now.toLocaleDateString();
+    const dateElement = document.getElementById('currentDate');
+    const timeElement = document.getElementById('currentTime');
 
-document.getElementById('currentTime').innerText =
-    now.toLocaleTimeString();
-```
+    if (dateElement)
+    {
+        dateElement.innerText = now.toLocaleDateString();
+    }
 
+    if (timeElement)
+    {
+        timeElement.innerText = now.toLocaleTimeString();
+    }
 }
 
-setInterval(updateClock,1000);
+document.addEventListener('DOMContentLoaded', () =>
+{
+    showSection('dashboard');
 
-updateClock();
+    updateClock();
+
+    setInterval(updateClock, 1000);
+});
