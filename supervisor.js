@@ -3,151 +3,192 @@ const API_URL =
 
 function showSection(sectionId)
 {
-    const sections =
-        document.querySelectorAll('.fm-section');
+const sections =
+document.querySelectorAll('.fm-section');
 
-    sections.forEach(section =>
-    {
-        section.style.display = 'none';
-    });
+```
+sections.forEach(section =>
+{
+    section.style.display = 'none';
+});
 
-    const target =
-        document.getElementById(sectionId);
+const target =
+    document.getElementById(sectionId);
 
-    if(target)
-    {
-        target.style.display = 'block';
-    }
+if(target)
+{
+    target.style.display = 'block';
+}
+```
+
 }
 
 function updateClock()
 {
-    const now = new Date();
+const now = new Date();
 
-    const dateElement =
-        document.getElementById('currentDate');
+```
+const dateElement =
+    document.getElementById('currentDate');
 
-    const timeElement =
-        document.getElementById('currentTime');
+const timeElement =
+    document.getElementById('currentTime');
 
-    if(dateElement)
-    {
-        dateElement.innerText =
-            now.toLocaleDateString();
-    }
+if(dateElement)
+{
+    dateElement.innerText =
+        now.toLocaleDateString();
+}
 
-    if(timeElement)
-    {
-        timeElement.innerText =
-            now.toLocaleTimeString();
-    }
+if(timeElement)
+{
+    timeElement.innerText =
+        now.toLocaleTimeString();
+}
+```
+
 }
 
 async function loadDashboard()
 {
-    try
-    {
-        const response =
-            await fetch(
-                API_URL + '?action=dashboard'
-            );
+try
+{
+const response =
+await fetch(
+API_URL + '?action=dashboard'
+);
 
-        const data =
-            await response.json();
+```
+    const data =
+        await response.json();
 
-        populateAttendanceCard(data.attendance);
-        populateEventCard(data.events);
-        populateIssueCard(data.issues);
-        populateAssignmentCard(data.assignments);
-    }
-    catch(error)
-    {
-        console.error(
-            'Dashboard Load Error:',
-            error
-        );
-    }
+    console.log(data);
+
+    populateStaffingCard(data.staffing);
+    populateEventCard(data.events);
+    populateIssueCard(data.issues);
+    populateAssignmentCard(data.assignments);
+}
+catch(error)
+{
+    console.error(
+        'Dashboard Load Error:',
+        error
+    );
+}
+```
+
 }
 
-function populateAttendanceCard(attendance)
+function populateStaffingCard(staffing)
 {
-    const card =
-        document.getElementById('attendanceCard');
+const card =
+document.getElementById('attendanceCard');
 
-    if(!card) return;
+```
+if(!card) return;
 
-    card.innerHTML = `
-        <h3>Attendance</h3>
-        <p>Present: ${attendance.present}</p>
-        <p>Absent: ${attendance.absent}</p>
-        <p>PTO: ${attendance.pto}</p>
-    `;
+card.innerHTML = `
+    <h3>Today's Staffing Impact</h3>
+
+    <p>Absences:
+    ${staffing.absences}</p>
+
+    <p>PTO:
+    ${staffing.pto}</p>
+
+    <p>Coverage Needed:
+    ${staffing.coverageNeeded}</p>
+`;
+```
+
 }
 
 function populateEventCard(events)
 {
-    const card =
-        document.getElementById('eventCard');
+const card =
+document.getElementById('eventCard');
 
-    if(!card) return;
+```
+if(!card) return;
 
-    const totalEvents =
-        events.length;
+const totalEvents =
+    Array.isArray(events)
+        ? events.length
+        : 0;
 
-    const setupEvents =
-        events.filter(
+const setupEvents =
+    Array.isArray(events)
+        ? events.filter(
             e => e.setupRequired
-        ).length;
+          ).length
+        : 0;
 
-    card.innerHTML = `
-        <h3>Events Today</h3>
-        <p>${totalEvents} Scheduled</p>
-        <p>${setupEvents} Require Setup</p>
-    `;
+card.innerHTML = `
+    <h3>Events Today</h3>
+    <p>${totalEvents} Scheduled</p>
+    <p>${setupEvents} Require Setup</p>
+`;
+```
+
 }
 
 function populateIssueCard(issues)
 {
-    const card =
-        document.getElementById('issuesCard');
+const card =
+document.getElementById('issuesCard');
 
-    if(!card) return;
+```
+if(!card) return;
 
-    card.innerHTML = `
-        <h3>Open Issues</h3>
-        <p>${issues.open} Open</p>
-        <p>${issues.critical} Critical</p>
-    `;
+card.innerHTML = `
+    <h3>Open Issues</h3>
+    <p>${issues.open}</p>
+    <p>Critical: ${issues.critical}</p>
+`;
+```
+
 }
 
 function populateAssignmentCard(assignments)
 {
-    const card =
-        document.getElementById('assignmentCard');
+const card =
+document.getElementById('assignmentCard');
 
-    if(!card) return;
+```
+if(!card) return;
 
-    card.innerHTML = `
-        <h3>Assignment Progress</h3>
-        <p>Completed: ${assignments.completed}</p>
-        <p>Remaining: ${assignments.remaining}</p>
-        <p>Late: ${assignments.late}</p>
-    `;
+card.innerHTML = `
+    <h3>Assignment Progress</h3>
+    <p>Completed:
+    ${assignments.completed}</p>
+
+    <p>Remaining:
+    ${assignments.remaining}</p>
+
+    <p>Late:
+    ${assignments.late}</p>
+`;
+```
+
 }
 
 document.addEventListener(
-    'DOMContentLoaded',
-    () =>
-    {
-        showSection('dashboard');
+'DOMContentLoaded',
+() =>
+{
+showSection('dashboard');
 
-        updateClock();
+```
+    updateClock();
 
-        setInterval(
-            updateClock,
-            1000
-        );
+    setInterval(
+        updateClock,
+        1000
+    );
 
-        loadDashboard();
-    }
+    loadDashboard();
+}
+```
+
 );
