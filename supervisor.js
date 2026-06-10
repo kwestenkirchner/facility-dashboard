@@ -1,3 +1,6 @@
+const API_URL =
+'https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec';
+
 function showSection(sectionId)
 {
     const sections =
@@ -46,69 +49,89 @@ async function loadDashboard()
     {
         const response =
             await fetch(
-                'https://script.google.com/macros/s/AKfycbwCJ3NZoYJn5MqZH-RVzX4YoXhyElSgOm4F5uM81JE3kKoB7AKP0RVce-lqcxdHqxH1Pg/exec'
+                API_URL + '?action=dashboard'
             );
 
         const data =
             await response.json();
 
-        populateDashboard(data);
+        populateAttendanceCard(data.attendance);
+        populateEventCard(data.events);
+        populateIssueCard(data.issues);
+        populateAssignmentCard(data.assignments);
     }
     catch(error)
     {
-        console.error(error);
+        console.error(
+            'Dashboard Load Error:',
+            error
+        );
     }
 }
 
-function populateDashboard(data)
+function populateAttendanceCard(attendance)
 {
-    if(!data) return;
+    const card =
+        document.getElementById('attendanceCard');
 
-    const attendance =
-        data.attendance || {};
+    if(!card) return;
 
-    const issues =
-        data.issues || {};
-
-    const assignments =
-        data.assignments || {};
-
-    const events =
-        data.events || [];
-
-    document.getElementById(
-        'attendanceCard'
-    ).innerHTML = `
+    card.innerHTML = `
         <h3>Attendance</h3>
-        <p>Present: ${attendance.present || 0}</p>
-        <p>Absent: ${attendance.absent || 0}</p>
-        <p>PTO: ${attendance.pto || 0}</p>
+        <p>Present: ${attendance.present}</p>
+        <p>Absent: ${attendance.absent}</p>
+        <p>PTO: ${attendance.pto}</p>
     `;
+}
 
-    document.getElementById(
-        'issuesCard'
-    ).innerHTML = `
-        <h3>Open Issues</h3>
-        <p>Open: ${issues.open || 0}</p>
-        <p>Critical: ${issues.critical || 0}</p>
-    `;
+function populateEventCard(events)
+{
+    const card =
+        document.getElementById('eventCard');
 
-    document.getElementById(
-        'assignmentCard'
-    ).innerHTML = `
-        <h3>Assignment Progress</h3>
-        <p>Completed: ${assignments.completed || 0}</p>
-        <p>Remaining: ${assignments.remaining || 0}</p>
-        <p>Late: ${assignments.late || 0}</p>
-    `;
+    if(!card) return;
 
-    document.getElementById(
-        'eventCard'
-    ).innerHTML =
-    `
+    const totalEvents =
+        events.length;
+
+    const setupEvents =
+        events.filter(
+            e => e.setupRequired
+        ).length;
+
+    card.innerHTML = `
         <h3>Events Today</h3>
-        ${events.length}
-        Event(s)
+        <p>${totalEvents} Scheduled</p>
+        <p>${setupEvents} Require Setup</p>
+    `;
+}
+
+function populateIssueCard(issues)
+{
+    const card =
+        document.getElementById('issuesCard');
+
+    if(!card) return;
+
+    card.innerHTML = `
+        <h3>Open Issues</h3>
+        <p>${issues.open} Open</p>
+        <p>${issues.critical} Critical</p>
+    `;
+}
+
+function populateAssignmentCard(assignments)
+{
+    const card =
+        document.getElementById('assignmentCard');
+
+    if(!card) return;
+
+    card.innerHTML = `
+        <h3>Assignment Progress</h3>
+        <p>Completed: ${assignments.completed}</p>
+        <p>Remaining: ${assignments.remaining}</p>
+        <p>Late: ${assignments.late}</p>
     `;
 }
 
