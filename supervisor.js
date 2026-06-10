@@ -6,7 +6,6 @@ function showSection(sectionId)
 const sections =
 document.querySelectorAll('.fm-section');
 
-```
 sections.forEach(section =>
 {
     section.style.display = 'none';
@@ -19,7 +18,6 @@ if(target)
 {
     target.style.display = 'block';
 }
-```
 
 }
 
@@ -27,7 +25,6 @@ function updateClock()
 {
 const now = new Date();
 
-```
 const dateElement =
     document.getElementById('currentDate');
 
@@ -45,7 +42,6 @@ if(timeElement)
     timeElement.innerText =
         now.toLocaleTimeString();
 }
-```
 
 }
 
@@ -58,7 +54,6 @@ await fetch(
 API_URL + '?action=dashboard'
 );
 
-```
     const data =
         await response.json();
 
@@ -76,7 +71,6 @@ catch(error)
         error
     );
 }
-```
 
 }
 
@@ -85,7 +79,6 @@ function populateStaffingCard(staffing)
 const card =
 document.getElementById('attendanceCard');
 
-```
 if(!card) return;
 
 card.innerHTML = `
@@ -100,7 +93,6 @@ card.innerHTML = `
     <p>Coverage Needed:
     ${staffing.coverageNeeded}</p>
 `;
-```
 
 }
 
@@ -109,7 +101,6 @@ function populateEventCard(events)
 const card =
 document.getElementById('eventCard');
 
-```
 if(!card) return;
 
 const totalEvents =
@@ -129,7 +120,6 @@ card.innerHTML = `
     <p>${totalEvents} Scheduled</p>
     <p>${setupEvents} Require Setup</p>
 `;
-```
 
 }
 
@@ -138,7 +128,6 @@ function populateIssueCard(issues)
 const card =
 document.getElementById('issuesCard');
 
-```
 if(!card) return;
 
 card.innerHTML = `
@@ -146,7 +135,6 @@ card.innerHTML = `
     <p>${issues.open}</p>
     <p>Critical: ${issues.critical}</p>
 `;
-```
 
 }
 
@@ -155,7 +143,6 @@ function populateAssignmentCard(assignments)
 const card =
 document.getElementById('assignmentCard');
 
-```
 if(!card) return;
 
 card.innerHTML = `
@@ -169,7 +156,6 @@ card.innerHTML = `
     <p>Late:
     ${assignments.late}</p>
 `;
-```
 
 }
 
@@ -179,7 +165,6 @@ document.addEventListener(
 {
 showSection('dashboard');
 
-```
     updateClock();
 
     setInterval(
@@ -189,6 +174,5 @@ showSection('dashboard');
 
     loadDashboard();
 }
-```
 
 );
